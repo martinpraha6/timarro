@@ -1,7 +1,12 @@
-import { normalizeTimelineData, type NormalizedTimeline } from './model/normalize';
-import { renderPopover, POPOVER_WIDTH, CANVAS_TOP_PAD, LANE_HEIGHT } from './render/event-card';
-import { renderTimeline, type PositionedEvent } from './render/render';
+import {
+  normalizeTimelineData,
+  type NormalizedTimeline,
+  type ResolvedEvent,
+} from './model/normalize';
+import { renderPopover, POPOVER_WIDTH } from './render/event-card';
+import { renderTimeline } from './render/render';
 import { applyStyles } from './render/styles';
+import { renderVerticalTimeline } from './render/vertical';
 import type { TimarroTimelineData } from './schema/types';
 import { validateTimelineData } from './schema/validate';
 
@@ -10,12 +15,21 @@ type State =
   | { kind: 'error'; heading: string; details: string[] }
   | { kind: 'ready'; data: TimarroTimelineData; normalized: NormalizedTimeline };
 
+type Orientation = 'horizontal' | 'vertical';
+
+/** Container width (px) below which `orientation="auto"` switches to vertical. */
+const VERTICAL_BREAKPOINT = 640;
+
 /**
- * `<timarro-timeline>` — renders a horizontal timeline from §5-shaped JSON.
+ * `<timarro-timeline>` — renders a timeline from §5-shaped JSON.
  *
  * Attributes: `src` (JSON URL) · `locale` (BCP-47, default browser) ·
- * `orientation` (M4: auto|horizontal|vertical — horizontal-only for now) ·
- * `legend` (M5). Setting the `data` property wins over `src`.
+ * `orientation` (auto | horizontal | vertical; auto switches on container
+ * width < 640px) · `legend` (M5). Setting the `data` property wins over `src`.
+ *
+ * Keyboard: arrow keys move focus chronologically between event markers
+ * (roving tabindex), Home/End jump to the first/last event, Enter/Space
+ * toggle the detail popover, Escape closes it and returns focus.
  *
  * Events (bubbling, composed): `timarro:load` {timeline} · `timarro:error`
  * {message[, issues]} · `timarro:select` {event}.
@@ -34,10 +48,12 @@ export class TimarroTimeline extends HTMLElement {
   #abort: AbortController | null = null;
   #resizeObserver: ResizeObserver | null = null;
   #lastWidth = 0;
+  #renderedOrientation: Orientation | null = null;
   #openEventId: string | null = null;
+  #openAnchor: HTMLElement | null = null;
   #onDocumentClick = (event: MouseEvent): void => this.#handleDocumentClick(event);
   #onDocumentKeydown = (event: KeyboardEvent): void => {
-    if (event.key === 'Escape') this.#closePopover();
+    if (event.key === 'Escape') this.#closePopover(true);
   };
 
   constructor() {
@@ -46,6 +62,7 @@ export class TimarroTimeline extends HTMLElement {
     applyStyles(this.#root);
     this.#container = document.createElement('div');
     this.#container.className = 'container';
+    this.#container.addEventListener('keydown', (event) => this.#handleMarkerKeydown(event));
     this.#root.append(this.#container);
   }
 
@@ -64,8 +81,14 @@ export class TimarroTimeline extends HTMLElement {
     if (typeof ResizeObserver !== 'undefined' && this.#resizeObserver === null) {
       this.#resizeObserver = new ResizeObserver(() => {
         const width = this.clientWidth;
-        if (width !== this.#lastWidth) {
-          this.#lastWidth = width;
+        if (width === this.#lastWidth) return;
+        this.#lastWidth = width;
+        // Vertical layout is flow-based — only re-render there when the
+        // orientation actually flips; horizontal re-scales on every change.
+        if (
+          this.#resolveOrientation() !== this.#renderedOrientation ||
+          this.#renderedOrientation === 'horizontal'
+        ) {
           this.#render();
         }
       });
@@ -146,11 +169,19 @@ export class TimarroTimeline extends HTMLElement {
     this.dispatchEvent(new CustomEvent(type, { detail, bubbles: true, composed: true }));
   }
 
+  #resolveOrientation(): Orientation {
+    const attr = this.getAttribute('orientation');
+    if (attr === 'horizontal' || attr === 'vertical') return attr;
+    const width = this.clientWidth || 0;
+    return width > 0 && width < VERTICAL_BREAKPOINT ? 'vertical' : 'horizontal';
+  }
+
   #render(): void {
     this.#closePopover();
     const container = this.#container;
     container.replaceChildren();
     const state = this.#state;
+    this.#renderedOrientation = null;
 
     if (state.kind === 'empty') {
       container.append(this.#statusBox('timarro: no data'));
@@ -172,16 +203,24 @@ export class TimarroTimeline extends HTMLElement {
       return;
     }
 
-    const viewport = document.createElement('div');
-    viewport.className = 'viewport';
-    viewport.setAttribute('part', 'viewport');
-    const width = Math.max(this.clientWidth || 0, 480);
+    const orientation = this.#resolveOrientation();
+    this.#renderedOrientation = orientation;
     this.#lastWidth = this.clientWidth || 0;
-    renderTimeline(viewport, state.normalized, width, {
+
+    const viewport = document.createElement('div');
+    viewport.className = orientation === 'vertical' ? 'viewport viewport--vertical' : 'viewport';
+    viewport.setAttribute('part', 'viewport');
+    const ctx = {
       locale: this.getAttribute('locale') ?? undefined,
-      onSelect: (positioned, anchor) => this.#togglePopover(positioned, anchor),
-    });
+      onSelect: (ev: ResolvedEvent, anchor: HTMLElement) => this.#togglePopover(ev, anchor),
+    };
+    if (orientation === 'vertical') {
+      renderVerticalTimeline(viewport, state.normalized, ctx);
+    } else {
+      renderTimeline(viewport, state.normalized, Math.max(this.clientWidth || 0, 480), ctx);
+    }
     container.append(viewport);
+    this.#applyRovingTabindex();
 
     const brand = document.createElement('div');
     brand.className = 'brand';
@@ -195,36 +234,76 @@ export class TimarroTimeline extends HTMLElement {
     container.append(brand);
   }
 
-  #togglePopover(positioned: PositionedEvent, anchor: HTMLElement): void {
-    const viewport = this.#container.querySelector<HTMLElement>('.viewport');
-    if (!viewport) return;
+  /** First marker is the single tab stop; arrow keys move focus from there. */
+  #applyRovingTabindex(): void {
+    const markers = this.#markers();
+    markers.forEach((marker, index) => {
+      marker.tabIndex = index === 0 ? 0 : -1;
+    });
+  }
 
-    if (this.#openEventId === positioned.ev.src.id) {
+  #markers(): HTMLButtonElement[] {
+    return [...this.#container.querySelectorAll<HTMLButtonElement>('.marker')];
+  }
+
+  #handleMarkerKeydown(event: KeyboardEvent): void {
+    const key = event.key;
+    if (!['ArrowRight', 'ArrowLeft', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(key)) return;
+    const markers = this.#markers();
+    if (markers.length === 0) return;
+    const current = markers.indexOf(this.#root.activeElement as HTMLButtonElement);
+    if (current === -1) return;
+
+    let next: number;
+    if (key === 'ArrowRight' || key === 'ArrowDown')
+      next = Math.min(current + 1, markers.length - 1);
+    else if (key === 'ArrowLeft' || key === 'ArrowUp') next = Math.max(current - 1, 0);
+    else if (key === 'Home') next = 0;
+    else next = markers.length - 1;
+
+    event.preventDefault();
+    if (next === current) return;
+    const from = markers[current];
+    const to = markers[next];
+    if (!from || !to) return;
+    from.tabIndex = -1;
+    to.tabIndex = 0;
+    to.focus();
+    to.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+  }
+
+  #togglePopover(ev: ResolvedEvent, anchor: HTMLElement): void {
+    if (this.#openEventId === ev.src.id) {
       this.#closePopover();
       return;
     }
     this.#closePopover();
 
-    const popover = renderPopover(positioned, this.getAttribute('locale') ?? undefined, () =>
-      this.#closePopover(),
+    const popover = renderPopover(ev, this.getAttribute('locale') ?? undefined, () =>
+      this.#closePopover(true),
     );
-    // Appended to .container, not the canvas — the viewport's overflow clipping must
-    // not cut the popover off. Compensate for the viewport's horizontal scroll.
+    // Positioned from the anchor's rect relative to .container (works in both
+    // orientations, and rect math already accounts for the viewport's scroll).
+    // Appended to .container, not the canvas — the viewport's overflow clipping
+    // must not cut the popover off.
+    const containerRect = this.#container.getBoundingClientRect();
+    const anchorRect = anchor.getBoundingClientRect();
     const containerWidth = this.#container.clientWidth || 480;
     const left = Math.min(
-      Math.max(positioned.left - viewport.scrollLeft, 8),
+      Math.max(anchorRect.left - containerRect.left, 8),
       Math.max(containerWidth - POPOVER_WIDTH - 8, 8),
     );
     popover.style.left = `${left}px`;
-    popover.style.top = `${viewport.offsetTop + CANVAS_TOP_PAD + (positioned.lane + 1) * LANE_HEIGHT + 2}px`;
+    popover.style.top = `${anchorRect.bottom - containerRect.top + 8}px`;
     this.#container.append(popover);
-    this.#openEventId = positioned.ev.src.id;
+    this.#openEventId = ev.src.id;
+    this.#openAnchor = anchor;
+    anchor.setAttribute('aria-expanded', 'true');
 
     document.addEventListener('click', this.#onDocumentClick);
     document.addEventListener('keydown', this.#onDocumentKeydown);
-    void anchor; // reserved for M4 focus management
 
-    this.#dispatch('timarro:select', { event: positioned.ev.src });
+    this.#dispatch('timarro:select', { event: ev.src });
   }
 
   #handleDocumentClick(event: MouseEvent): void {
@@ -239,9 +318,13 @@ export class TimarroTimeline extends HTMLElement {
     this.#closePopover();
   }
 
-  #closePopover(): void {
+  #closePopover(refocusAnchor = false): void {
     this.#container.querySelector('.popover')?.remove();
     this.#openEventId = null;
+    const anchor = this.#openAnchor;
+    this.#openAnchor = null;
+    anchor?.setAttribute('aria-expanded', 'false');
+    if (refocusAnchor) anchor?.focus();
     document.removeEventListener('click', this.#onDocumentClick);
     document.removeEventListener('keydown', this.#onDocumentKeydown);
   }

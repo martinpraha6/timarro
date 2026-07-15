@@ -20,7 +20,7 @@
     </style>
   </head>
   <body>
-    <h1>timarro — demo (M3: rendering core)</h1>
+    <h1>timarro — demo (M4: responsive &amp; a11y)</h1>
     <section>
       <h2>No data</h2>
       <timarro-timeline id="empty"></timarro-timeline>
@@ -32,6 +32,16 @@
     <section>
       <h2>Charles IV (year/month precision, circa)</h2>
       <timarro-timeline id="charles"></timarro-timeline>
+    </section>
+    <section>
+      <h2>Narrow container (auto → vertical)</h2>
+      <div style="max-width: 360px; border: 1px dashed #ccc; padding: 8px">
+        <timarro-timeline id="apollo-narrow"></timarro-timeline>
+      </div>
+    </section>
+    <section>
+      <h2>Forced vertical (orientation="vertical")</h2>
+      <timarro-timeline id="charles-vertical" orientation="vertical"></timarro-timeline>
     </section>
     <section>
       <h2>Invalid data (validator output)</h2>

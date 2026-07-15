@@ -24,7 +24,7 @@ export interface PositionedEvent {
 export function renderEvent(
   positioned: PositionedEvent,
   locale: string | undefined,
-  onSelect: (positioned: PositionedEvent, anchor: HTMLElement) => void,
+  onSelect: (ev: ResolvedEvent, anchor: HTMLElement) => void,
 ): HTMLElement {
   const item = document.createElement('div');
   item.className = 'event';
@@ -39,7 +39,9 @@ export function renderEvent(
   marker.className = positioned.kind === 'range' ? 'marker marker--range' : 'marker marker--point';
   if (positioned.kind === 'range') marker.style.width = `${positioned.barWidth}px`;
   marker.setAttribute('aria-label', formatEventAria(positioned.ev, locale));
-  marker.addEventListener('click', () => onSelect(positioned, marker));
+  marker.setAttribute('aria-haspopup', 'dialog');
+  marker.setAttribute('aria-expanded', 'false');
+  marker.addEventListener('click', () => onSelect(positioned.ev, marker));
 
   const label = document.createElement('span');
   label.className = 'label';
@@ -50,15 +52,17 @@ export function renderEvent(
 }
 
 export function renderPopover(
-  positioned: PositionedEvent,
+  ev: ResolvedEvent,
   locale: string | undefined,
   onClose: () => void,
 ): HTMLElement {
-  const { src } = positioned.ev;
+  const { src } = ev;
 
   const popover = document.createElement('article');
   popover.className = 'popover';
   popover.setAttribute('part', 'card');
+  popover.setAttribute('role', 'dialog');
+  popover.setAttribute('aria-label', src.title);
 
   const close = document.createElement('button');
   close.type = 'button';
@@ -73,7 +77,7 @@ export function renderPopover(
 
   const date = document.createElement('p');
   date.className = 'popover-date';
-  date.textContent = formatEventDate(positioned.ev, locale);
+  date.textContent = formatEventDate(ev, locale);
 
   popover.append(close, title, date);
 

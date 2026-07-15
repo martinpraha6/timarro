@@ -38,8 +38,58 @@ const CSS = /* css */ `
     overflow-x: auto;
     overflow-y: hidden;
   }
+  .viewport--vertical {
+    overflow: visible;
+  }
   .canvas {
     position: relative;
+  }
+
+  /* Vertical (rail) layout — markers on a left rail, cards to the right. */
+  .vlist {
+    position: relative;
+    padding: 2px 0;
+  }
+  .vlist::before {
+    content: '';
+    position: absolute;
+    left: 5px;
+    top: 12px;
+    bottom: 12px;
+    width: 2px;
+    background: color-mix(in srgb, var(--timarro-accent, #2563eb) 30%, transparent);
+  }
+  .vevent {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 6px 0;
+  }
+  .vevent .marker {
+    position: relative;
+    z-index: 1;
+    margin-top: 3px;
+  }
+  .marker--vrange {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+  }
+  .vbody {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+  }
+  .vbody .label {
+    white-space: normal;
+    max-width: none;
+    overflow: visible;
+  }
+  .vdate {
+    font-size: 11px;
+    opacity: 0.65;
   }
 
   .event {
@@ -213,6 +263,16 @@ const CSS = /* css */ `
   .issues {
     margin: 0.5rem 0 0;
     padding-left: 1.25rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation: none !important;
+      transition: none !important;
+      scroll-behavior: auto !important;
+    }
   }
 `;
 

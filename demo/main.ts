@@ -11,6 +11,8 @@ async function load(selector: string, url: string): Promise<void> {
 
 void load('#apollo', './data/apollo.json');
 void load('#charles', './data/charles-iv.json');
+void load('#apollo-narrow', './data/apollo.json');
+void load('#charles-vertical', './data/charles-iv.json');
 
 // Deliberately invalid — shows the validator's error rendering.
 const broken = document.querySelector<TimarroTimeline>('#broken');

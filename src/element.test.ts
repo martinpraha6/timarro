@@ -127,3 +127,101 @@ describe('<timarro-timeline>', () => {
     el.remove();
   });
 });
+
+describe('orientation', () => {
+  it('renders the vertical rail layout when orientation="vertical"', () => {
+    const el = mount();
+    el.setAttribute('orientation', 'vertical');
+    el.data = apollo as TimarroTimelineData;
+    const root = el.shadowRoot!;
+    expect(root.querySelector('.vlist')).not.toBeNull();
+    expect(root.querySelector('.canvas')).toBeNull();
+    expect(root.querySelectorAll('[part="event"]')).toHaveLength(7);
+    // Chronological top → bottom, with a visible date per event.
+    const dates = [...root.querySelectorAll('.vdate')];
+    expect(dates).toHaveLength(7);
+    expect(root.querySelector('.vbody .label')?.textContent).toBe(
+      "Kennedy's Moon speech to Congress",
+    );
+    el.remove();
+  });
+
+  it('switches back to horizontal when the attribute changes', () => {
+    const el = mount();
+    el.setAttribute('orientation', 'vertical');
+    el.data = apollo as TimarroTimelineData;
+    el.setAttribute('orientation', 'horizontal');
+    const root = el.shadowRoot!;
+    expect(root.querySelector('.canvas')).not.toBeNull();
+    expect(root.querySelector('.vlist')).toBeNull();
+    el.remove();
+  });
+});
+
+describe('keyboard navigation', () => {
+  function markers(el: TimarroTimeline): HTMLButtonElement[] {
+    return [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('.marker')];
+  }
+
+  function press(target: HTMLElement, key: string): void {
+    target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, composed: true }));
+  }
+
+  it('sets a roving tabindex: first marker 0, rest -1', () => {
+    const el = mount();
+    el.data = apollo as TimarroTimelineData;
+    const all = markers(el);
+    expect(all[0]?.tabIndex).toBe(0);
+    expect(all.slice(1).every((m) => m.tabIndex === -1)).toBe(true);
+    el.remove();
+  });
+
+  it('moves focus chronologically with arrow keys and jumps with Home/End', () => {
+    const el = mount();
+    el.data = apollo as TimarroTimelineData;
+    const all = markers(el);
+    all[0]!.focus();
+    press(all[0]!, 'ArrowRight');
+    expect(el.shadowRoot!.activeElement).toBe(all[1]);
+    expect(all[1]?.tabIndex).toBe(0);
+    expect(all[0]?.tabIndex).toBe(-1);
+
+    press(all[1]!, 'ArrowLeft');
+    expect(el.shadowRoot!.activeElement).toBe(all[0]);
+
+    press(all[0]!, 'End');
+    expect(el.shadowRoot!.activeElement).toBe(all.at(-1));
+    press(all.at(-1)!, 'Home');
+    expect(el.shadowRoot!.activeElement).toBe(all[0]);
+    el.remove();
+  });
+
+  it('arrow keys also work in the vertical layout', () => {
+    const el = mount();
+    el.setAttribute('orientation', 'vertical');
+    el.data = apollo as TimarroTimelineData;
+    const all = markers(el);
+    all[0]!.focus();
+    press(all[0]!, 'ArrowDown');
+    expect(el.shadowRoot!.activeElement).toBe(all[1]);
+    press(all[1]!, 'ArrowUp');
+    expect(el.shadowRoot!.activeElement).toBe(all[0]);
+    el.remove();
+  });
+});
+
+describe('popover a11y state', () => {
+  it('toggles aria-expanded on the anchor marker', () => {
+    const el = mount();
+    el.data = apollo as TimarroTimelineData;
+    const marker = el.shadowRoot!.querySelector<HTMLButtonElement>('.marker')!;
+    expect(marker.getAttribute('aria-expanded')).toBe('false');
+    marker.click();
+    expect(marker.getAttribute('aria-expanded')).toBe('true');
+    expect(el.shadowRoot!.querySelector('[role="dialog"]')).not.toBeNull();
+    marker.click();
+    expect(marker.getAttribute('aria-expanded')).toBe('false');
+    expect(el.shadowRoot!.querySelector('[role="dialog"]')).toBeNull();
+    el.remove();
+  });
+});

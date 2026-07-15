@@ -1,6 +1,6 @@
 import { assignLanes } from '../layout/lanes';
 import { createTimeScale } from '../layout/scale';
-import type { NormalizedTimeline } from '../model/normalize';
+import type { NormalizedTimeline, ResolvedEvent } from '../model/normalize';
 import { renderAxis } from './axis';
 import {
   AXIS_HEIGHT,
@@ -14,7 +14,7 @@ export type { PositionedEvent } from './event-card';
 
 export interface RenderContext {
   locale?: string;
-  onSelect(positioned: PositionedEvent, anchor: HTMLElement): void;
+  onSelect(ev: ResolvedEvent, anchor: HTMLElement): void;
 }
 
 const MAX_LABEL_PX = 180;
