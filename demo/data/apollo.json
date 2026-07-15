@@ -1,0 +1,59 @@
+{
+  "timeline": {
+    "id": "tl-apollo",
+    "title": "Apollo program",
+    "description": "Key milestones of NASA's Apollo program, 1961–1972.",
+    "visibility": "public",
+    "sourceTypes": ["manual"]
+  },
+  "events": [
+    {
+      "id": "ev-kennedy-speech",
+      "title": "Kennedy's Moon speech to Congress",
+      "description": "President Kennedy commits the US to landing a man on the Moon before the decade is out.",
+      "date": { "start": "1961-05-25", "precision": "day" },
+      "entities": ["John F. Kennedy", "NASA", "United States Congress"],
+      "order": 1
+    },
+    {
+      "id": "ev-apollo-1",
+      "title": "Apollo 1 cabin fire",
+      "description": "Grissom, White, and Chaffee die in a launch-pad fire during a rehearsal test.",
+      "date": { "start": "1967-01-27", "precision": "day" },
+      "entities": ["Gus Grissom", "Ed White", "Roger Chaffee"]
+    },
+    {
+      "id": "ev-apollo-8",
+      "title": "Apollo 8 — first crewed lunar orbit",
+      "date": { "start": "1968-12-21", "end": "1968-12-27", "precision": "day" },
+      "entities": ["Frank Borman", "Jim Lovell", "Bill Anders"]
+    },
+    {
+      "id": "ev-apollo-11-launch",
+      "title": "Apollo 11 launches from Kennedy Space Center",
+      "date": { "start": "1969-07-16T13:32:00Z", "precision": "datetime" },
+      "entities": ["Neil Armstrong", "Buzz Aldrin", "Michael Collins"]
+    },
+    {
+      "id": "ev-first-step",
+      "title": "First step on the Moon",
+      "description": "Neil Armstrong steps onto the lunar surface.",
+      "date": { "start": "1969-07-21T02:56:15Z", "precision": "datetime" },
+      "entities": ["Neil Armstrong"],
+      "sourceRef": "mission transcript 109:24:48"
+    },
+    {
+      "id": "ev-apollo-13",
+      "title": "Apollo 13 — successful failure",
+      "description": "An oxygen tank explosion aborts the Moon landing; the crew returns safely.",
+      "date": { "start": "1970-04-11", "end": "1970-04-17", "precision": "day" },
+      "entities": ["Jim Lovell", "Jack Swigert", "Fred Haise"]
+    },
+    {
+      "id": "ev-apollo-17",
+      "title": "Apollo 17 — last Moon landing",
+      "date": { "start": "1972-12-07", "end": "1972-12-19", "precision": "day" },
+      "entities": ["Eugene Cernan", "Harrison Schmitt", "Ronald Evans"]
+    }
+  ]
+}

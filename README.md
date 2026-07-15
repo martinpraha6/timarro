@@ -42,6 +42,35 @@ document.querySelector('timarro-timeline').data = {
 };
 ```
 
+## Data format (v1)
+
+The element consumes `{ timeline, events }` (full types in `timarro`, canonical Zod
+schema in `timarro/schema`). Event dates use a fuzzy-date grammar:
+
+| `date.start` / `date.end`              | `date.precision` | Rendered as                |
+| -------------------------------------- | ---------------- | -------------------------- |
+| `"1943"`                               | `year`           | year-wide uncertainty band |
+| `"1943-05"`                            | `month`          | month-wide band            |
+| `"1943-05-12"`                         | `day`            | exact marker               |
+| `"1943-05-12T14:30[:00][Z or ±HH:MM]"` | `datetime`       | exact marker               |
+
+Rules:
+
+- `precision` must match the granularity of `start` (validation error otherwise).
+- `end` is optional and may use a different granularity than `start`.
+- Date-only values are UTC calendar dates; naive datetimes are treated as UTC.
+- `"circa": true` marks an approximate date ("~1943") without widening its interval.
+- Every value resolves to a half-open interval `[earliest, latest)` — markers sit at the
+  midpoint, uncertainty bands span the interval.
+- BCE dates are rejected in v1.
+
+Validation: the element validates on `data` set and renders the issues. Programmatic use:
+
+```ts
+import { validateTimelineData } from 'timarro'; // dependency-free, ships in the embed
+import { timarroTimelineDataSchema } from 'timarro/schema'; // canonical Zod schema
+```
+
 ## Development
 
 ```sh

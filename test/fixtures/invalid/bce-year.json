@@ -1,0 +1,13 @@
+{
+  "expectIssueContaining": "BCE dates are not supported",
+  "data": {
+    "timeline": { "id": "t", "title": "BCE" },
+    "events": [
+      {
+        "id": "e1",
+        "title": "Assassination of Caesar",
+        "date": { "start": "-0044", "precision": "year" }
+      }
+    ]
+  }
+}

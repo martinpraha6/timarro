@@ -20,14 +20,22 @@
     </style>
   </head>
   <body>
-    <h1>timarro — demo (M1 walking skeleton)</h1>
+    <h1>timarro — demo (M2: schema &amp; validation)</h1>
     <section>
       <h2>No data</h2>
       <timarro-timeline id="empty"></timarro-timeline>
     </section>
     <section>
-      <h2>With placeholder data</h2>
-      <timarro-timeline id="with-data"></timarro-timeline>
+      <h2>Apollo program (day/datetime precision, ranges)</h2>
+      <timarro-timeline id="apollo"></timarro-timeline>
+    </section>
+    <section>
+      <h2>Charles IV (year/month precision, circa)</h2>
+      <timarro-timeline id="charles"></timarro-timeline>
+    </section>
+    <section>
+      <h2>Invalid data (validator output)</h2>
+      <timarro-timeline id="broken"></timarro-timeline>
     </section>
     <script type="module" src="./main.ts"></script>
   </body>

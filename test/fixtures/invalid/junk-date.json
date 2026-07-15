@@ -1,0 +1,13 @@
+{
+  "expectIssueContaining": "invalid date",
+  "data": {
+    "timeline": { "id": "t", "title": "Junk date string" },
+    "events": [
+      {
+        "id": "e1",
+        "title": "Prose instead of ISO",
+        "date": { "start": "May 1943", "precision": "month" }
+      }
+    ]
+  }
+}

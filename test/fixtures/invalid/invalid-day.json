@@ -1,0 +1,13 @@
+{
+  "expectIssueContaining": "day out of range",
+  "data": {
+    "timeline": { "id": "t", "title": "Invalid day" },
+    "events": [
+      {
+        "id": "e1",
+        "title": "Feb 29 in a non-leap year",
+        "date": { "start": "1943-02-29", "precision": "day" }
+      }
+    ]
+  }
+}

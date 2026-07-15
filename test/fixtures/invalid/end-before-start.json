@@ -1,0 +1,13 @@
+{
+  "expectIssueContaining": "is before start",
+  "data": {
+    "timeline": { "id": "t", "title": "End before start" },
+    "events": [
+      {
+        "id": "e1",
+        "title": "Backwards range",
+        "date": { "start": "1950-06-01", "end": "1949", "precision": "day" }
+      }
+    ]
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "expectIssueContaining": "does not match start",
+  "data": {
+    "timeline": { "id": "t", "title": "Precision mismatch" },
+    "events": [
+      {
+        "id": "e1",
+        "title": "Year value declared as day precision",
+        "date": { "start": "1943", "precision": "day" }
+      }
+    ]
+  }
+}

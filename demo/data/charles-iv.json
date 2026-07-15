@@ -1,0 +1,66 @@
+{
+  "timeline": {
+    "id": "tl-charles-iv",
+    "title": "Charles IV, King of Bohemia and Holy Roman Emperor",
+    "description": "Life of Charles IV (1316–1378) — exercises year/month precision and circa dates.",
+    "visibility": "public",
+    "sourceTypes": ["manual"]
+  },
+  "events": [
+    {
+      "id": "ev-birth",
+      "title": "Born in Prague",
+      "date": { "start": "1316-05-14", "precision": "day" },
+      "entities": ["Prague", "John of Bohemia", "Elizabeth of Bohemia"]
+    },
+    {
+      "id": "ev-france",
+      "title": "Raised and educated at the French royal court",
+      "date": { "start": "1323", "end": "1330", "precision": "year" },
+      "entities": ["Paris", "Charles IV of France"]
+    },
+    {
+      "id": "ev-return-bohemia",
+      "title": "Returns to Bohemia as margrave of Moravia",
+      "date": { "start": "1333-10", "precision": "month", "circa": true },
+      "entities": ["Bohemia", "Moravia"]
+    },
+    {
+      "id": "ev-king-romans",
+      "title": "Elected King of the Romans",
+      "date": { "start": "1346-07-11", "precision": "day" },
+      "entities": ["Rhens"]
+    },
+    {
+      "id": "ev-king-bohemia",
+      "title": "Crowned King of Bohemia",
+      "date": { "start": "1347-09-02", "precision": "day" },
+      "entities": ["Prague"]
+    },
+    {
+      "id": "ev-university",
+      "title": "Founds Prague University",
+      "description": "The first university in Central Europe.",
+      "date": { "start": "1348-04-07", "precision": "day" },
+      "entities": ["Prague", "Charles University"]
+    },
+    {
+      "id": "ev-emperor",
+      "title": "Crowned Holy Roman Emperor in Rome",
+      "date": { "start": "1355-04-05", "precision": "day" },
+      "entities": ["Rome"]
+    },
+    {
+      "id": "ev-charles-bridge",
+      "title": "Charles Bridge construction begins",
+      "date": { "start": "1357", "precision": "year", "circa": true },
+      "entities": ["Prague", "Peter Parler"]
+    },
+    {
+      "id": "ev-death",
+      "title": "Dies in Prague",
+      "date": { "start": "1378-11-29", "precision": "day" },
+      "entities": ["Prague"]
+    }
+  ]
+}

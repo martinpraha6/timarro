@@ -1,0 +1,12 @@
+{
+  "expectIssueContaining": "non-empty string",
+  "data": {
+    "timeline": { "id": "t", "title": "Missing event title" },
+    "events": [
+      {
+        "id": "e1",
+        "date": { "start": "1969-07-21", "precision": "day" }
+      }
+    ]
+  }
+}
