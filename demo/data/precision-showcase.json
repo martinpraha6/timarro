@@ -1,0 +1,49 @@
+{
+  "timeline": {
+    "id": "tl-precision-showcase",
+    "title": "Precision showcase — every marker treatment",
+    "description": "Fixture exercising all date precisions, circa, and fuzzy range endpoints."
+  },
+  "events": [
+    {
+      "id": "ev-year",
+      "title": "Village founded (year)",
+      "date": { "start": "1905", "precision": "year" }
+    },
+    {
+      "id": "ev-range-exact",
+      "title": "Town hall construction (exact range)",
+      "date": { "start": "1910-05-01", "end": "1913-09-30", "precision": "day" }
+    },
+    {
+      "id": "ev-day",
+      "title": "Treaty signed (day)",
+      "date": { "start": "1912-04-15", "precision": "day" }
+    },
+    {
+      "id": "ev-month",
+      "title": "Factory opens (month)",
+      "date": { "start": "1921-07", "precision": "month" }
+    },
+    {
+      "id": "ev-circa-month",
+      "title": "Archive fire (circa month)",
+      "date": { "start": "1926-03", "precision": "month", "circa": true }
+    },
+    {
+      "id": "ev-range-fuzzy",
+      "title": "Economic depression (fuzzy range)",
+      "date": { "start": "1929", "end": "1934-06", "precision": "year" }
+    },
+    {
+      "id": "ev-datetime",
+      "title": "Rocket launch (datetime)",
+      "date": { "start": "1930-06-05T08:30Z", "precision": "datetime" }
+    },
+    {
+      "id": "ev-circa-year",
+      "title": "Old bridge built (circa year)",
+      "date": { "start": "1938", "precision": "year", "circa": true }
+    }
+  ]
+}

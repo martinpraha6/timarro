@@ -9,15 +9,27 @@ export const POPOVER_WIDTH = 280;
 export interface PositionedEvent {
   ev: ResolvedEvent;
   kind: 'point' | 'range';
-  /** px of start.mid on the scale. */
+  /** Points: px of start.mid. Ranges: px of the bar's left edge (start.earliest). */
   x: number;
-  /** Bar width for ranges; 0 for points. */
+  /** Bar width for ranges (uncertainty envelope included); 0 for points. */
   barWidth: number;
   /** Left edge of the rendered flex row. */
   left: number;
-  /** Horizontal extent (incl. estimated label) used for lane packing. */
+  /** Horizontal extent (incl. estimated label and band) used for lane packing. */
   extent: [number, number];
   lane: number;
+  /** Fuzzy points: canvas-px span of the start uncertainty interval. */
+  band?: [number, number];
+  /** Ranges: px width of the endpoint fade when that endpoint is fuzzy. */
+  fadeLeft?: number;
+  fadeRight?: number;
+}
+
+/** Marker shape modifier per precision: ring for month, diamond for year (M5). */
+export function markerShapeClass(precision: string): string {
+  if (precision === 'year') return ' marker--year';
+  if (precision === 'month') return ' marker--month';
+  return '';
 }
 
 /** All data strings go through textContent — never innerHTML. */
@@ -34,10 +46,30 @@ export function renderEvent(
   item.style.left = `${positioned.left}px`;
   item.style.top = `${CANVAS_TOP_PAD + positioned.lane * LANE_HEIGHT}px`;
 
+  // Uncertainty band behind fuzzy point markers; dashed edges signal circa.
+  if (positioned.band) {
+    const band = document.createElement('span');
+    band.className = positioned.ev.src.date.circa === true ? 'band band--circa' : 'band';
+    band.setAttribute('aria-hidden', 'true');
+    band.style.left = `${positioned.band[0] - positioned.left}px`;
+    band.style.width = `${Math.max(positioned.band[1] - positioned.band[0], 2)}px`;
+    item.append(band);
+  }
+
   const marker = document.createElement('button');
   marker.type = 'button';
-  marker.className = positioned.kind === 'range' ? 'marker marker--range' : 'marker marker--point';
-  if (positioned.kind === 'range') marker.style.width = `${positioned.barWidth}px`;
+  marker.className =
+    positioned.kind === 'range'
+      ? 'marker marker--range'
+      : `marker marker--point${markerShapeClass(positioned.ev.startParts.precision)}`;
+  if (positioned.kind === 'range') {
+    marker.style.width = `${positioned.barWidth}px`;
+    const fadeLeft = positioned.fadeLeft ?? 0;
+    const fadeRight = positioned.fadeRight ?? 0;
+    if (fadeLeft > 1 || fadeRight > 1) {
+      marker.style.background = `linear-gradient(to right, transparent 0, var(--timarro-accent, #2563eb) ${fadeLeft}px, var(--timarro-accent, #2563eb) calc(100% - ${fadeRight}px), transparent 100%)`;
+    }
+  }
   marker.setAttribute('aria-label', formatEventAria(positioned.ev, locale));
   marker.setAttribute('aria-haspopup', 'dialog');
   marker.setAttribute('aria-expanded', 'false');
@@ -45,7 +77,11 @@ export function renderEvent(
 
   const label = document.createElement('span');
   label.className = 'label';
-  label.textContent = positioned.ev.src.title;
+  // "~" is the at-a-glance circa affordance (the date itself lives in the popover).
+  label.textContent =
+    positioned.ev.src.date.circa === true
+      ? `~ ${positioned.ev.src.title}`
+      : positioned.ev.src.title;
 
   item.append(marker, label);
   return item;

@@ -1,4 +1,5 @@
 import type { NormalizedTimeline, ResolvedEvent } from '../model/normalize';
+import { markerShapeClass } from './event-card';
 import { formatEventAria, formatEventDate } from './format';
 
 export interface VerticalRenderContext {
@@ -33,7 +34,9 @@ export function renderVerticalTimeline(
     const marker = document.createElement('button');
     marker.type = 'button';
     marker.className =
-      ev.end !== undefined ? 'marker marker--range marker--vrange' : 'marker marker--point';
+      ev.end !== undefined
+        ? 'marker marker--range marker--vrange'
+        : `marker marker--point${markerShapeClass(ev.startParts.precision)}`;
     marker.setAttribute('aria-label', formatEventAria(ev, ctx.locale));
     marker.setAttribute('aria-haspopup', 'dialog');
     marker.setAttribute('aria-expanded', 'false');

@@ -94,6 +94,7 @@ const CSS = /* css */ `
 
   .event {
     position: absolute;
+    z-index: 0; /* stacking context so the band's z-index: -1 stays inside the item */
     display: flex;
     align-items: center;
     gap: 6px;
@@ -112,9 +113,34 @@ const CSS = /* css */ `
     height: 12px;
     border-radius: 50%;
   }
+  .marker--month {
+    background: transparent;
+    border: 3px solid var(--timarro-accent, #2563eb);
+  }
+  .marker--year {
+    width: 11px;
+    height: 11px;
+    border-radius: 2px;
+    transform: rotate(45deg);
+  }
   .marker--range {
     height: 10px;
     border-radius: 5px;
+  }
+
+  /* Uncertainty band behind fuzzy point markers (M5). */
+  .band {
+    position: absolute;
+    z-index: -1;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 8px;
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--timarro-accent, #2563eb) 18%, transparent);
+  }
+  .band--circa {
+    border-left: 1px dashed var(--timarro-accent, #2563eb);
+    border-right: 1px dashed var(--timarro-accent, #2563eb);
   }
   .marker:focus-visible {
     outline: 2px solid var(--timarro-accent, #2563eb);
@@ -233,6 +259,39 @@ const CSS = /* css */ `
   .popover-close:hover,
   .popover-close:focus-visible {
     opacity: 1;
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-top: 6px;
+    font-size: 11px;
+    opacity: 0.75;
+  }
+  .legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .legend-swatch {
+    flex: none;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: var(--timarro-accent, #2563eb);
+  }
+  .legend-swatch--month {
+    background: transparent;
+    border: 3px solid var(--timarro-accent, #2563eb);
+  }
+  .legend-swatch--year {
+    border-radius: 2px;
+    transform: rotate(45deg);
+  }
+  .legend-tilde {
+    font-weight: 700;
+    line-height: 1;
   }
 
   .brand {

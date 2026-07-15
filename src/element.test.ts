@@ -210,6 +210,103 @@ describe('keyboard navigation', () => {
   });
 });
 
+describe('fuzzy-date visual treatment (M5)', () => {
+  const showcase: TimarroTimelineData = {
+    timeline: { id: 't-precision', title: 'Precision' },
+    events: [
+      { id: 'e-day', title: 'Day', date: { start: '1912-04-15', precision: 'day' } },
+      { id: 'e-month', title: 'Month', date: { start: '1921-07', precision: 'month' } },
+      { id: 'e-year', title: 'Year', date: { start: '1905', precision: 'year' } },
+      {
+        id: 'e-circa',
+        title: 'Circa',
+        date: { start: '1938', precision: 'year', circa: true },
+      },
+      {
+        id: 'e-range-fuzzy',
+        title: 'Fuzzy range',
+        date: { start: '1929', end: '1934-06', precision: 'year' },
+      },
+    ],
+  };
+
+  it('renders precision-distinct marker shapes', () => {
+    const el = mount();
+    el.data = showcase;
+    const root = el.shadowRoot!;
+    expect(root.querySelectorAll('.marker--month')).toHaveLength(1);
+    expect(root.querySelectorAll('.marker--year')).toHaveLength(2); // year + circa year
+    expect(root.querySelectorAll('.marker--range')).toHaveLength(1);
+    el.remove();
+  });
+
+  it('draws uncertainty bands behind fuzzy markers, dashed for circa', () => {
+    const el = mount();
+    el.data = showcase;
+    const root = el.shadowRoot!;
+    const bands = [...root.querySelectorAll<HTMLElement>('.band')];
+    expect(bands).toHaveLength(3); // month, year, circa year
+    expect(bands.every((b) => parseFloat(b.style.width) >= 2)).toBe(true);
+    expect(root.querySelectorAll('.band--circa')).toHaveLength(1);
+    el.remove();
+  });
+
+  it('fades fuzzy range endpoints with a gradient', () => {
+    const el = mount();
+    el.data = showcase;
+    const bar = el.shadowRoot!.querySelector<HTMLElement>('.marker--range')!;
+    expect(bar.style.background).toContain('linear-gradient');
+    el.remove();
+  });
+
+  it('keeps exact ranges solid (no gradient)', () => {
+    const el = mount();
+    el.data = {
+      timeline: { id: 't', title: 'Exact range' },
+      events: [
+        {
+          id: 'e',
+          title: 'Exact',
+          date: { start: '1910-05-01', end: '1913-09-30', precision: 'day' },
+        },
+      ],
+    } as TimarroTimelineData;
+    const bar = el.shadowRoot!.querySelector<HTMLElement>('.marker--range')!;
+    expect(bar.style.background).toBe('');
+    el.remove();
+  });
+
+  it('applies shape markers in the vertical layout too', () => {
+    const el = mount();
+    el.setAttribute('orientation', 'vertical');
+    el.data = showcase;
+    const root = el.shadowRoot!;
+    expect(root.querySelectorAll('.vlist .marker--month')).toHaveLength(1);
+    expect(root.querySelectorAll('.vlist .marker--year')).toHaveLength(2);
+    el.remove();
+  });
+
+  it('announces approximation in the aria-label for circa events', () => {
+    const el = mount();
+    el.data = showcase;
+    const circa = el.shadowRoot!.querySelector('[data-event-id="e-circa"] .marker');
+    expect(circa?.getAttribute('aria-label')).toContain('approximate');
+    el.remove();
+  });
+
+  it('shows the legend by default and hides it with legend="false"', () => {
+    const el = mount();
+    el.data = showcase;
+    const root = el.shadowRoot!;
+    expect(root.querySelector('[part="legend"]')?.textContent).toContain('Approximate');
+    el.setAttribute('legend', 'false');
+    expect(root.querySelector('[part="legend"]')).toBeNull();
+    el.setAttribute('legend', '');
+    expect(root.querySelector('[part="legend"]')).not.toBeNull();
+    el.remove();
+  });
+});
+
 describe('popover a11y state', () => {
   it('toggles aria-expanded on the anchor marker', () => {
     const el = mount();

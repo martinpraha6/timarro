@@ -222,6 +222,8 @@ export class TimarroTimeline extends HTMLElement {
     container.append(viewport);
     this.#applyRovingTabindex();
 
+    if (this.#legendEnabled()) container.append(this.#buildLegend());
+
     const brand = document.createElement('div');
     brand.className = 'brand';
     const link = document.createElement('a');
@@ -232,6 +234,38 @@ export class TimarroTimeline extends HTMLElement {
     link.textContent = 'Powered by Timarro';
     brand.append(link);
     container.append(brand);
+  }
+
+  /** Legend defaults on; `legend="false"` / `legend="off"` hides it. */
+  #legendEnabled(): boolean {
+    const value = this.getAttribute('legend');
+    return value !== 'false' && value !== 'off';
+  }
+
+  /** Compact key for the precision marker shapes (M5). */
+  #buildLegend(): HTMLElement {
+    const legend = document.createElement('div');
+    legend.className = 'legend';
+    legend.setAttribute('part', 'legend');
+    const entries: [string, string][] = [
+      ['legend-swatch', 'Exact date'],
+      ['legend-swatch legend-swatch--month', 'Month'],
+      ['legend-swatch legend-swatch--year', 'Year'],
+      ['legend-tilde', 'Approximate'],
+    ];
+    for (const [className, text] of entries) {
+      const item = document.createElement('span');
+      item.className = 'legend-item';
+      const swatch = document.createElement('span');
+      swatch.className = className;
+      swatch.setAttribute('aria-hidden', 'true');
+      if (className === 'legend-tilde') swatch.textContent = '~';
+      const label = document.createElement('span');
+      label.textContent = text;
+      item.append(swatch, label);
+      legend.append(item);
+    }
+    return legend;
   }
 
   /** First marker is the single tab stop; arrow keys move focus from there. */

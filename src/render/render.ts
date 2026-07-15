@@ -20,6 +20,11 @@ export interface RenderContext {
 const MAX_LABEL_PX = 180;
 const MIN_RANGE_BAR_PX = 12;
 
+/** Year/month precision spans a visible uncertainty interval; day/datetime doesn't. */
+function isFuzzyPrecision(precision: string): boolean {
+  return precision === 'year' || precision === 'month';
+}
+
 /**
  * Builds the horizontal timeline into `viewport` (cleared first): an absolutely
  * positioned canvas with lane-packed events and a calendar axis. The canvas may be
@@ -37,14 +42,51 @@ export function renderTimeline(
   const scale = createTimeScale(normalized.domain, viewportWidth);
 
   const positioned = normalized.events.map((ev): PositionedEvent => {
-    const x = scale.toPx(ev.start.mid);
     const kind = ev.end ? 'range' : 'point';
-    const barWidth = ev.end ? Math.max(scale.toPx(ev.end.mid) - x, MIN_RANGE_BAR_PX) : 0;
     // Estimated label width (capped; CSS ellipsizes) — avoids a measure/reflow pass.
     const labelWidth = Math.min(MAX_LABEL_PX, 24 + ev.src.title.length * 6.5);
-    const left = kind === 'point' ? x - 6 : x;
-    const contentWidth = (kind === 'point' ? 12 : barWidth) + 6 + labelWidth;
-    return { ev, kind, x, barWidth, left, extent: [left, left + contentWidth], lane: 0 };
+
+    if (kind === 'range' && ev.end) {
+      // Bar spans the full uncertainty envelope; fuzzy endpoints fade out via a
+      // gradient across their interval instead of ending in a hard cap (M5).
+      const barStart = scale.toPx(ev.start.earliest);
+      const barEnd = Math.max(scale.toPx(ev.end.latest), barStart + MIN_RANGE_BAR_PX);
+      const barWidth = barEnd - barStart;
+      const half = barWidth / 2;
+      const fadeLeft = isFuzzyPrecision(ev.startParts.precision)
+        ? Math.min(scale.toPx(ev.start.latest) - barStart, half)
+        : 0;
+      const fadeRight =
+        ev.endParts && isFuzzyPrecision(ev.endParts.precision)
+          ? Math.min(barEnd - scale.toPx(ev.end.earliest), half)
+          : 0;
+      const contentWidth = barWidth + 6 + labelWidth;
+      return {
+        ev,
+        kind,
+        x: barStart,
+        barWidth,
+        left: barStart,
+        fadeLeft,
+        fadeRight,
+        extent: [barStart, barStart + contentWidth],
+        lane: 0,
+      };
+    }
+
+    const x = scale.toPx(ev.start.mid);
+    const left = x - 6;
+    const band: [number, number] | undefined = isFuzzyPrecision(ev.startParts.precision)
+      ? [scale.toPx(ev.start.earliest), scale.toPx(ev.start.latest)]
+      : undefined;
+    const contentWidth = 12 + 6 + labelWidth;
+    // The uncertainty band counts toward the packing extent so same-lane
+    // neighbours don't sit on top of it.
+    const extent: [number, number] = [
+      Math.min(left, band ? band[0] : left),
+      Math.max(left + contentWidth, band ? band[1] : 0),
+    ];
+    return { ev, kind, x, barWidth: 0, left, band, extent, lane: 0 };
   });
 
   const { lanes, laneCount } = assignLanes(positioned.map((p) => p.extent));
