@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>timarro demo</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        margin: 2rem auto;
+        max-width: 56rem;
+        padding: 0 1rem;
+      }
+      h1 {
+        font-size: 1.4rem;
+      }
+      section {
+        margin-block: 2rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>timarro — demo (M1 walking skeleton)</h1>
+    <section>
+      <h2>No data</h2>
+      <timarro-timeline id="empty"></timarro-timeline>
+    </section>
+    <section>
+      <h2>With placeholder data</h2>
+      <timarro-timeline id="with-data"></timarro-timeline>
+    </section>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
