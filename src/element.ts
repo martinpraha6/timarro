@@ -21,6 +21,14 @@ type Orientation = 'horizontal' | 'vertical';
 const VERTICAL_BREAKPOINT = 640;
 
 /**
+ * SSR-safe base: importing this module in Node (e.g. to run the validator
+ * server-side) must not crash on a missing HTMLElement. The stand-in class is
+ * never instantiated — `define()` no-ops outside the browser.
+ */
+const BaseElement: typeof HTMLElement =
+  typeof HTMLElement !== 'undefined' ? HTMLElement : (class {} as unknown as typeof HTMLElement);
+
+/**
  * `<timarro-timeline>` — renders a timeline from §5-shaped JSON.
  *
  * Attributes: `src` (JSON URL) · `locale` (BCP-47, default browser) ·
@@ -34,7 +42,7 @@ const VERTICAL_BREAKPOINT = 640;
  * Events (bubbling, composed): `timarro:load` {timeline} · `timarro:error`
  * {message[, issues]} · `timarro:select` {event}.
  */
-export class TimarroTimeline extends HTMLElement {
+export class TimarroTimeline extends BaseElement {
   static readonly observedAttributes: readonly string[] = [
     'src',
     'locale',
@@ -396,6 +404,7 @@ export class TimarroTimeline extends HTMLElement {
 }
 
 export function define(tagName = 'timarro-timeline'): void {
+  if (typeof customElements === 'undefined') return; // SSR / Node: no-op
   if (!customElements.get(tagName)) {
     customElements.define(tagName, TimarroTimeline);
   }

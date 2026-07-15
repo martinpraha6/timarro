@@ -54,6 +54,16 @@
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "register": [
+        "./dist/register.d.ts"
+      ],
+      "schema": [
+        "./dist/schema/index.d.ts"
+      ]
+    }
+  },
   "unpkg": "./dist/timarro.min.js",
   "jsdelivr": "./dist/timarro.min.js",
   "files": [
@@ -66,15 +76,23 @@
   ],
   "scripts": {
     "build": "tsup",
+    "check:bundle": "node scripts/check-bundle.mjs",
     "demo": "vite demo",
     "dev": "tsup --watch",
     "format": "prettier --write .",
     "lint": "eslint . && prettier --check .",
-    "prepublishOnly": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+    "prepublishOnly": "pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm size && pnpm check:bundle",
+    "size": "size-limit",
     "test": "vitest run",
     "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit"
   },
+  "size-limit": [
+    {
+      "path": "dist/timarro.min.js",
+      "limit": "25 kB"
+    }
+  ],
   "publishConfig": {
     "access": "public"
   },
@@ -86,9 +104,12 @@
     "@axe-core/playwright": "^4.12.1",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.61.1",
+    "@size-limit/file": "^12.1.0",
     "eslint": "^10.7.0",
+    "globals": "^17.7.0",
     "happy-dom": "^20.10.6",
     "prettier": "^3.9.5",
+    "size-limit": "^12.1.0",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.64.0",
