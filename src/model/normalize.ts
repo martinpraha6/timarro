@@ -1,11 +1,13 @@
 import type { TimarroEvent, TimarroTimelineData } from '../schema/types';
-import { parseFuzzyDate, resolveInstant, type ResolvedInstant } from './date';
+import { parseFuzzyDate, resolveInstant, type DateParts, type ResolvedInstant } from './date';
 
 /** A validated event resolved onto the time axis — the renderer's working unit. */
 export interface ResolvedEvent {
   src: TimarroEvent;
   start: ResolvedInstant;
   end?: ResolvedInstant;
+  startParts: DateParts;
+  endParts?: DateParts;
   /** True when the event carries visible uncertainty: year/month precision or `circa`. */
   fuzzy: boolean;
 }
@@ -24,12 +26,13 @@ export interface NormalizedTimeline {
 export function normalizeTimelineData(data: TimarroTimelineData): NormalizedTimeline {
   const events = data.events
     .map((src): ResolvedEvent => {
-      const start = resolveInstant(parseFuzzyDate(src.date.start));
-      const end =
-        src.date.end !== undefined ? resolveInstant(parseFuzzyDate(src.date.end)) : undefined;
+      const startParts = parseFuzzyDate(src.date.start);
+      const endParts = src.date.end !== undefined ? parseFuzzyDate(src.date.end) : undefined;
+      const start = resolveInstant(startParts);
+      const end = endParts !== undefined ? resolveInstant(endParts) : undefined;
       const fuzzy =
         src.date.precision === 'year' || src.date.precision === 'month' || src.date.circa === true;
-      return { src, start, end, fuzzy };
+      return { src, start, end, startParts, endParts, fuzzy };
     })
     .sort(compareResolvedEvents);
 

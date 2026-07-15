@@ -53,7 +53,14 @@ export function monthLength(year: number, month: number): number {
 /**
  * UTC epoch ms without `Date.UTC`'s 0–99 → 1900+ mapping (years like 0079 must work).
  */
-function utcTime(year: number, month = 1, day = 1, hour = 0, minute = 0, second = 0): number {
+export function utcTime(
+  year: number,
+  month = 1,
+  day = 1,
+  hour = 0,
+  minute = 0,
+  second = 0,
+): number {
   const d = new Date(0);
   d.setUTCFullYear(year, month - 1, day);
   d.setUTCHours(hour, minute, second, 0);

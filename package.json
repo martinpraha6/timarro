@@ -72,6 +72,7 @@
     "lint": "eslint . && prettier --check .",
     "prepublishOnly": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
     "test": "vitest run",
+    "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit"
   },
   "publishConfig": {
@@ -83,6 +84,7 @@
   "packageManager": "pnpm@10.34.5",
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.61.1",
     "eslint": "^10.7.0",
     "happy-dom": "^20.10.6",
     "prettier": "^3.9.5",

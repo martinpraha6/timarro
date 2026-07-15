@@ -18,5 +18,6 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
-      # M3 adds: pnpm exec playwright install chromium --with-deps && pnpm test:e2e
+      - run: pnpm exec playwright install chromium --with-deps
+      - run: pnpm test:e2e
       # M6 adds: pnpm size (size-limit gate)
