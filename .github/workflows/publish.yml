@@ -15,8 +15,7 @@ jobs:
           cache: pnpm
           registry-url: 'https://registry.npmjs.org'
       - run: pnpm install --frozen-lockfile
-      - run: pnpm lint && pnpm typecheck && pnpm test && pnpm build
-      # --provenance requires a PUBLIC source repo — re-add at M6 when the repo flips public.
-      - run: npm publish --access public
+      - run: pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm size && pnpm check:bundle
+      - run: npm publish --access public --provenance
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }} # granular automation token; Trusted Publishing + provenance at M6
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }} # or remove once npm Trusted Publishing (OIDC) is configured for this workflow
