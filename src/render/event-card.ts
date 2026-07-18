@@ -67,7 +67,7 @@ export function renderEvent(
     const fadeLeft = positioned.fadeLeft ?? 0;
     const fadeRight = positioned.fadeRight ?? 0;
     if (fadeLeft > 1 || fadeRight > 1) {
-      marker.style.background = `linear-gradient(to right, transparent 0, var(--timarro-accent, #2563eb) ${fadeLeft}px, var(--timarro-accent, #2563eb) calc(100% - ${fadeRight}px), transparent 100%)`;
+      marker.style.background = `linear-gradient(to right, transparent 0, var(--timarro-accent, #d6451b) ${fadeLeft}px, var(--timarro-accent, #d6451b) calc(100% - ${fadeRight}px), transparent 100%)`;
     }
   }
   marker.setAttribute('aria-label', formatEventAria(positioned.ev, locale));

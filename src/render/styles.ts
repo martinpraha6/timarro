@@ -57,7 +57,7 @@ const CSS = /* css */ `
     top: 12px;
     bottom: 12px;
     width: 2px;
-    background: color-mix(in srgb, var(--timarro-accent, #2563eb) 30%, transparent);
+    background: color-mix(in srgb, var(--timarro-accent, #d6451b) 30%, transparent);
   }
   .vevent {
     position: relative;
@@ -106,7 +106,7 @@ const CSS = /* css */ `
     padding: 0;
     cursor: pointer;
     flex: none;
-    background: var(--timarro-accent, #2563eb);
+    background: var(--timarro-accent, #d6451b);
   }
   .marker--point {
     width: 12px;
@@ -115,7 +115,7 @@ const CSS = /* css */ `
   }
   .marker--month {
     background: transparent;
-    border: 3px solid var(--timarro-accent, #2563eb);
+    border: 3px solid var(--timarro-accent, #d6451b);
   }
   .marker--year {
     width: 11px;
@@ -136,14 +136,14 @@ const CSS = /* css */ `
     transform: translateY(-50%);
     height: 8px;
     border-radius: 4px;
-    background: color-mix(in srgb, var(--timarro-accent, #2563eb) 18%, transparent);
+    background: color-mix(in srgb, var(--timarro-accent, #d6451b) 18%, transparent);
   }
   .band--circa {
-    border-left: 1px dashed var(--timarro-accent, #2563eb);
-    border-right: 1px dashed var(--timarro-accent, #2563eb);
+    border-left: 1px dashed var(--timarro-accent, #d6451b);
+    border-right: 1px dashed var(--timarro-accent, #d6451b);
   }
   .marker:focus-visible {
-    outline: 2px solid var(--timarro-accent, #2563eb);
+    outline: 2px solid var(--timarro-accent, #d6451b);
     outline-offset: 2px;
   }
   .label {
@@ -233,7 +233,7 @@ const CSS = /* css */ `
     font-size: 11px;
     padding: 2px 8px;
     border-radius: 999px;
-    background: color-mix(in srgb, var(--timarro-accent, #2563eb) 12%, transparent);
+    background: color-mix(in srgb, var(--timarro-accent, #d6451b) 12%, transparent);
   }
   .popover-media,
   .popover-source {
@@ -279,11 +279,11 @@ const CSS = /* css */ `
     width: 11px;
     height: 11px;
     border-radius: 50%;
-    background: var(--timarro-accent, #2563eb);
+    background: var(--timarro-accent, #d6451b);
   }
   .legend-swatch--month {
     background: transparent;
-    border: 3px solid var(--timarro-accent, #2563eb);
+    border: 3px solid var(--timarro-accent, #d6451b);
   }
   .legend-swatch--year {
     border-radius: 2px;
