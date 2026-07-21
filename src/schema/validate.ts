@@ -103,6 +103,7 @@ function validateEvent(event: unknown, base: string, push: (p: string, m: string
   requireNonEmptyString(event, 'title', base, push);
   optionalString(event, 'description', base, push);
   optionalString(event, 'sourceRef', base, push);
+  optionalString(event, 'color', base, push);
   optionalString(event, 'timelineId', base, push);
   optionalStringArray(event, 'entities', base, push);
   optionalStringArray(event, 'mediaUrls', base, push);

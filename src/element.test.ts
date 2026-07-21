@@ -307,6 +307,86 @@ describe('fuzzy-date visual treatment (M5)', () => {
   });
 });
 
+describe('range bands (full-height overlap layer)', () => {
+  const overlapping: TimarroTimelineData = {
+    timeline: { id: 't', title: 'Ranges' },
+    events: [
+      { id: 'a', title: 'A wide', date: { start: '1900', end: '1950', precision: 'year' } },
+      { id: 'b', title: 'B inside', date: { start: '1910', end: '1920', precision: 'year' } },
+      { id: 'c', title: 'C later', date: { start: '1970', end: '1980', precision: 'year' } },
+    ],
+  };
+
+  it('draws each range as an .rband in a background layer below the events', () => {
+    const el = mount();
+    el.data = overlapping;
+    const root = el.shadowRoot!;
+    const canvas = root.querySelector('.canvas')!;
+    // The ranges layer paints first, so bands sit behind the event markers.
+    expect(canvas.firstElementChild?.classList.contains('ranges')).toBe(true);
+    expect(root.querySelectorAll('.ranges .rband')).toHaveLength(3);
+    // Each range keeps one interactive bar and one [part=event] wrapper.
+    expect(root.querySelectorAll('.event--range')).toHaveLength(3);
+    expect(root.querySelectorAll('.marker--range')).toHaveLength(3);
+    el.remove();
+  });
+
+  it('gives overlapping ranges different band heights; reuses a lane otherwise', () => {
+    const el = mount();
+    el.data = overlapping;
+    // Bands are appended in chronological range order: [a, b, c].
+    const [a, b, c] = [...el.shadowRoot!.querySelectorAll<HTMLElement>('.rband')].map((band) =>
+      parseFloat(band.style.height),
+    );
+    // b nests inside a → deeper lane → taller band; c clears a → same lane, same height.
+    expect(b!).toBeGreaterThan(a!);
+    expect(c!).toBeCloseTo(a!, 5);
+    el.remove();
+  });
+});
+
+describe('per-event color', () => {
+  it('applies a valid color as --ev-color on the event and its band', () => {
+    const el = mount();
+    el.data = {
+      timeline: { id: 't', title: 'Colored' },
+      events: [
+        { id: 'p', title: 'Point', date: { start: '1900', precision: 'year' }, color: '#0d9488' },
+        {
+          id: 'r',
+          title: 'Range',
+          date: { start: '1905', end: '1915', precision: 'year' },
+          color: '#2563eb',
+        },
+      ],
+    } as TimarroTimelineData;
+    const root = el.shadowRoot!;
+    const point = root.querySelector<HTMLElement>('[data-event-id="p"]')!;
+    expect(point.style.getPropertyValue('--ev-color')).toBe('#0d9488');
+    const band = root.querySelector<HTMLElement>('.rband')!;
+    expect(band.style.getPropertyValue('--ev-color')).toBe('#2563eb');
+    el.remove();
+  });
+
+  it('ignores a color that could smuggle extra declarations', () => {
+    const el = mount();
+    el.data = {
+      timeline: { id: 't', title: 'Hostile color' },
+      events: [
+        {
+          id: 'p',
+          title: 'Point',
+          date: { start: '1900', precision: 'year' },
+          color: 'red; url(evil)',
+        },
+      ],
+    } as TimarroTimelineData;
+    const point = el.shadowRoot!.querySelector<HTMLElement>('[data-event-id="p"]')!;
+    expect(point.style.getPropertyValue('--ev-color')).toBe('');
+    el.remove();
+  });
+});
+
 describe('popover a11y state', () => {
   it('toggles aria-expanded on the anchor marker', () => {
     const el = mount();

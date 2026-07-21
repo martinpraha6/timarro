@@ -1,5 +1,5 @@
 import type { NormalizedTimeline, ResolvedEvent } from '../model/normalize';
-import { markerShapeClass } from './event-card';
+import { markerShapeClass, safeCssColor } from './event-card';
 import { formatEventAria, formatEventDate } from './format';
 
 export interface VerticalRenderContext {
@@ -30,6 +30,8 @@ export function renderVerticalTimeline(
     item.setAttribute('role', 'listitem');
     item.setAttribute('part', 'event');
     item.dataset['eventId'] = ev.src.id;
+    const color = safeCssColor(ev.src.color);
+    if (color) item.style.setProperty('--ev-color', color);
 
     const marker = document.createElement('button');
     marker.type = 'button';

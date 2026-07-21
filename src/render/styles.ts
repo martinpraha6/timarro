@@ -60,6 +60,7 @@ const CSS = /* css */ `
     background: color-mix(in srgb, var(--timarro-accent, #d6451b) 30%, transparent);
   }
   .vevent {
+    --_accent: var(--ev-color, var(--timarro-accent, #d6451b));
     position: relative;
     display: flex;
     align-items: flex-start;
@@ -92,7 +93,31 @@ const CSS = /* css */ `
     opacity: 0.65;
   }
 
+  /* Range bands: a background layer painted below the event markers. */
+  .ranges {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+  .rband {
+    /* Resolve the per-event accent once; children/inline styles read var(--_accent). */
+    --_accent: var(--ev-color, var(--timarro-accent, #d6451b));
+    position: absolute;
+    border-radius: 6px;
+    /* Semi-transparent so overlapping bands darken — the stack reads as density. */
+    background: color-mix(in srgb, var(--_accent) 15%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--_accent) 22%, transparent);
+  }
+  .events {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+  }
+
   .event {
+    /* Resolve the per-event accent once; .marker / .band read var(--_accent). */
+    --_accent: var(--ev-color, var(--timarro-accent, #d6451b));
     position: absolute;
     z-index: 0; /* stacking context so the band's z-index: -1 stays inside the item */
     display: flex;
@@ -100,13 +125,17 @@ const CSS = /* css */ `
     gap: 6px;
     height: 28px;
   }
+  /* Range bars sit in a shorter row so stacked ranges keep a visible gap. */
+  .event--range {
+    height: 22px;
+  }
   .marker {
     appearance: none;
     border: 0;
     padding: 0;
     cursor: pointer;
     flex: none;
-    background: var(--timarro-accent, #d6451b);
+    background: var(--_accent);
   }
   .marker--point {
     width: 12px;
@@ -115,7 +144,7 @@ const CSS = /* css */ `
   }
   .marker--month {
     background: transparent;
-    border: 3px solid var(--timarro-accent, #d6451b);
+    border: 3px solid var(--_accent);
   }
   .marker--year {
     width: 11px;
@@ -136,11 +165,11 @@ const CSS = /* css */ `
     transform: translateY(-50%);
     height: 8px;
     border-radius: 4px;
-    background: color-mix(in srgb, var(--timarro-accent, #d6451b) 18%, transparent);
+    background: color-mix(in srgb, var(--_accent) 18%, transparent);
   }
   .band--circa {
-    border-left: 1px dashed var(--timarro-accent, #d6451b);
-    border-right: 1px dashed var(--timarro-accent, #d6451b);
+    border-left: 1px dashed var(--_accent);
+    border-right: 1px dashed var(--_accent);
   }
   .marker:focus-visible {
     outline: 2px solid var(--timarro-accent, #d6451b);
@@ -160,6 +189,7 @@ const CSS = /* css */ `
     left: 0;
     right: 0;
     bottom: 0;
+    z-index: 2;
     height: 30px;
     border-top: 1px solid color-mix(in srgb, currentColor 25%, transparent);
   }

@@ -41,6 +41,12 @@ export interface TimarroEvent {
   mediaUrls?: string[];
   /** Pointer back into the original source (timestamp, page, …) — shown as plain text. */
   sourceRef?: string;
+  /**
+   * Optional per-event accent (any CSS color: `#d6451b`, `rebeccapurple`,
+   * `rgb(…)`, …). Overrides `--timarro-accent` for this event's marker, range
+   * band, and uncertainty band. Invalid values are ignored at render time.
+   */
+  color?: string;
   /** Sort tie-break for events with identical start instants (default 0). */
   order?: number;
   timelineId?: string;

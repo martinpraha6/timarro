@@ -6,7 +6,12 @@ import {
   AXIS_HEIGHT,
   CANVAS_TOP_PAD,
   LANE_HEIGHT,
+  RANGE_LANE_HEIGHT,
+  RANGE_ROW_HEIGHT,
+  RANGES_TOP_GAP,
   renderEvent,
+  renderRangeBand,
+  safeCssColor,
   type PositionedEvent,
 } from './event-card';
 
@@ -27,8 +32,10 @@ function isFuzzyPrecision(precision: string): boolean {
 
 /**
  * Builds the horizontal timeline into `viewport` (cleared first): an absolutely
- * positioned canvas with lane-packed events and a calendar axis. The canvas may be
- * wider than the viewport — horizontal overflow scrolls natively (no zoom in v1).
+ * positioned canvas with lane-packed point events on top, ranges as full-height
+ * translucent bands behind them (labeled bars packed into a region below), and a
+ * calendar axis. The canvas may be wider than the viewport — horizontal overflow
+ * scrolls natively (no zoom in v1).
  */
 export function renderTimeline(
   viewport: HTMLElement,
@@ -43,6 +50,7 @@ export function renderTimeline(
 
   const positioned = normalized.events.map((ev): PositionedEvent => {
     const kind = ev.end ? 'range' : 'point';
+    const color = safeCssColor(ev.src.color) ?? undefined;
     // Estimated label width (capped; CSS ellipsizes) — avoids a measure/reflow pass.
     const labelWidth = Math.min(MAX_LABEL_PX, 24 + ev.src.title.length * 6.5);
 
@@ -67,10 +75,12 @@ export function renderTimeline(
         x: barStart,
         barWidth,
         left: barStart,
+        top: 0,
         fadeLeft,
         fadeRight,
         extent: [barStart, barStart + contentWidth],
         lane: 0,
+        color,
       };
     }
 
@@ -86,13 +96,49 @@ export function renderTimeline(
       Math.min(left, band ? band[0] : left),
       Math.max(left + contentWidth, band ? band[1] : 0),
     ];
-    return { ev, kind, x, barWidth: 0, left, band, extent, lane: 0 };
+    return { ev, kind, x, barWidth: 0, left, top: 0, band, extent, lane: 0, color };
   });
 
-  const { lanes, laneCount } = assignLanes(positioned.map((p) => p.extent));
-  positioned.forEach((p, i) => {
-    p.lane = lanes[i] ?? 0;
+  // Points and ranges pack independently: points into lanes at the top, ranges
+  // into their own region below. Chronological order in `positioned` is kept for
+  // keyboard nav and DOM order.
+  const pointIdx = positioned.flatMap((p, i) => (p.kind === 'point' ? [i] : []));
+  const rangeIdx = positioned.flatMap((p, i) => (p.kind === 'range' ? [i] : []));
+
+  const pointLanes = assignLanes(pointIdx.map((i) => positioned[i]!.extent));
+  pointIdx.forEach((i, k) => {
+    const p = positioned[i]!;
+    p.lane = pointLanes.lanes[k] ?? 0;
+    p.top = CANVAS_TOP_PAD + p.lane * LANE_HEIGHT;
   });
+
+  // Ranges stack by temporal overlap (bar span, not label), so overlapping
+  // ranges land on separate lanes — and thus get different band heights.
+  const rangeLanes = assignLanes(
+    rangeIdx.map((i) => [positioned[i]!.x, positioned[i]!.x + positioned[i]!.barWidth] as const),
+    2,
+  );
+  const pointsHeight = pointLanes.laneCount * LANE_HEIGHT;
+  const rangesTop = CANVAS_TOP_PAD + pointsHeight + (rangeLanes.laneCount > 0 ? RANGES_TOP_GAP : 0);
+  rangeIdx.forEach((i, k) => {
+    const p = positioned[i]!;
+    p.lane = rangeLanes.lanes[k] ?? 0;
+    p.top = rangesTop + p.lane * RANGE_LANE_HEIGHT;
+    // Band reaches from the top of the events area down to this range's own bar;
+    // deeper (more-overlapped) lanes yield taller bands. Semi-transparent fill
+    // (CSS) makes overlaps darken so density reads at a glance.
+    p.rangeBand = {
+      left: p.x,
+      width: p.barWidth,
+      top: CANVAS_TOP_PAD,
+      height: p.top + RANGE_ROW_HEIGHT - CANVAS_TOP_PAD,
+    };
+  });
+
+  const plotBottom =
+    rangeLanes.laneCount > 0
+      ? rangesTop + rangeLanes.laneCount * RANGE_LANE_HEIGHT
+      : CANVAS_TOP_PAD + pointsHeight;
 
   const canvasWidth = Math.max(
     viewportWidth,
@@ -103,7 +149,16 @@ export function renderTimeline(
   const canvas = document.createElement('div');
   canvas.className = 'canvas';
   canvas.style.width = `${canvasWidth}px`;
-  canvas.style.height = `${CANVAS_TOP_PAD + laneCount * LANE_HEIGHT + AXIS_HEIGHT}px`;
+  canvas.style.height = `${plotBottom + AXIS_HEIGHT}px`;
+
+  // Background layer: range bands, painted below the events (pointer-transparent).
+  const ranges = document.createElement('div');
+  ranges.className = 'ranges';
+  ranges.setAttribute('aria-hidden', 'true');
+  for (const i of rangeIdx) {
+    const band = renderRangeBand(positioned[i]!);
+    if (band) ranges.append(band);
+  }
 
   const list = document.createElement('div');
   list.className = 'events';
@@ -112,6 +167,6 @@ export function renderTimeline(
     list.append(renderEvent(p, ctx.locale, ctx.onSelect));
   }
 
-  canvas.append(list, renderAxis(scale, ctx.locale));
+  canvas.append(ranges, list, renderAxis(scale, ctx.locale));
   viewport.append(canvas);
 }

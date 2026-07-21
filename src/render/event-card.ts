@@ -6,6 +6,25 @@ export const AXIS_HEIGHT = 30;
 export const CANVAS_TOP_PAD = 4;
 export const POPOVER_WIDTH = 280;
 
+/** Range layout: labeled bars live in their own region below the point events. */
+export const RANGE_BAR_HEIGHT = 10;
+/** Height of a single range's bar row (bar vertically centred within). */
+export const RANGE_ROW_HEIGHT = 22;
+/** Vertical stride between stacked range lanes (row + gap). */
+export const RANGE_LANE_HEIGHT = 26;
+/** Gap between the point-events region and the ranges region below it. */
+export const RANGES_TOP_GAP = 8;
+
+/** CSS custom property carrying a per-event accent (see {@link safeCssColor}). */
+const EV_COLOR_VAR = '--ev-color';
+/**
+ * The resolved accent token. The stylesheet defines `--_accent` on each
+ * color-bearing container as `var(--ev-color, var(--timarro-accent, …))`, so a
+ * single-level `var()` here is enough — and stays parseable in non-browser DOMs
+ * (happy-dom rejects nested `var()` in inline styles).
+ */
+const ACCENT = 'var(--_accent)';
+
 export interface PositionedEvent {
   ev: ResolvedEvent;
   kind: 'point' | 'range';
@@ -15,6 +34,8 @@ export interface PositionedEvent {
   barWidth: number;
   /** Left edge of the rendered flex row. */
   left: number;
+  /** Canvas-px y of the rendered row (marker centre line region). */
+  top: number;
   /** Horizontal extent (incl. estimated label and band) used for lane packing. */
   extent: [number, number];
   lane: number;
@@ -23,6 +44,36 @@ export interface PositionedEvent {
   /** Ranges: px width of the endpoint fade when that endpoint is fuzzy. */
   fadeLeft?: number;
   fadeRight?: number;
+  /**
+   * Ranges only: the full-height translucent band drawn behind the events the
+   * range spans. Height grows with overlap depth so stacked ranges stay legible.
+   */
+  rangeBand?: { left: number; width: number; top: number; height: number };
+  /** Sanitized per-event accent, or undefined to inherit the host accent. */
+  color?: string;
+}
+
+/**
+ * Accept a CSS color for use as an inline accent; reject anything else so an
+ * untrusted `color` field can't smuggle extra declarations into the style
+ * attribute. Uses `CSS.supports` where available (browser), with a conservative
+ * literal-form fallback for non-DOM environments.
+ */
+export function safeCssColor(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const v = value.trim();
+  if (v.length === 0 || v.length > 64) return null;
+  // Never allow value-terminating / comment / url tokens regardless of engine.
+  if (/[;{}]/.test(v) || v.includes('/*') || /url\s*\(/i.test(v)) return null;
+  if (typeof CSS !== 'undefined' && typeof CSS.supports === 'function') {
+    return CSS.supports('color', v) ? v : null;
+  }
+  // Fallback: hex, a bare keyword, or a numeric color function.
+  return /^#[0-9a-f]{3,8}$/i.test(v) ||
+    /^[a-z]+$/i.test(v) ||
+    /^(rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color)\([\d\s.,%/-]+\)$/i.test(v)
+    ? v
+    : null;
 }
 
 /** Marker shape modifier per precision: ring for month, diamond for year (M5). */
@@ -39,12 +90,13 @@ export function renderEvent(
   onSelect: (ev: ResolvedEvent, anchor: HTMLElement) => void,
 ): HTMLElement {
   const item = document.createElement('div');
-  item.className = 'event';
+  item.className = positioned.kind === 'range' ? 'event event--range' : 'event';
   item.setAttribute('role', 'listitem');
   item.setAttribute('part', 'event');
   item.dataset['eventId'] = positioned.ev.src.id;
   item.style.left = `${positioned.left}px`;
-  item.style.top = `${CANVAS_TOP_PAD + positioned.lane * LANE_HEIGHT}px`;
+  item.style.top = `${positioned.top}px`;
+  if (positioned.color) item.style.setProperty(EV_COLOR_VAR, positioned.color);
 
   // Uncertainty band behind fuzzy point markers; dashed edges signal circa.
   if (positioned.band) {
@@ -67,7 +119,7 @@ export function renderEvent(
     const fadeLeft = positioned.fadeLeft ?? 0;
     const fadeRight = positioned.fadeRight ?? 0;
     if (fadeLeft > 1 || fadeRight > 1) {
-      marker.style.background = `linear-gradient(to right, transparent 0, var(--timarro-accent, #d6451b) ${fadeLeft}px, var(--timarro-accent, #d6451b) calc(100% - ${fadeRight}px), transparent 100%)`;
+      marker.style.background = `linear-gradient(to right, transparent 0, ${ACCENT} ${fadeLeft}px, ${ACCENT} calc(100% - ${fadeRight}px), transparent 100%)`;
     }
   }
   marker.setAttribute('aria-label', formatEventAria(positioned.ev, locale));
@@ -85,6 +137,26 @@ export function renderEvent(
 
   item.append(marker, label);
   return item;
+}
+
+/**
+ * The full-height translucent band a range casts behind the events it spans.
+ * Purely decorative (`pointer-events: none`) — the labeled bar from
+ * {@link renderEvent} stays the interactive handle. Semi-transparent fill means
+ * overlapping bands darken where they stack, reading as event density.
+ */
+export function renderRangeBand(positioned: PositionedEvent): HTMLElement | null {
+  const rb = positioned.rangeBand;
+  if (!rb) return null;
+  const band = document.createElement('span');
+  band.className = 'rband';
+  band.setAttribute('aria-hidden', 'true');
+  band.style.left = `${rb.left}px`;
+  band.style.width = `${rb.width}px`;
+  band.style.top = `${rb.top}px`;
+  band.style.height = `${rb.height}px`;
+  if (positioned.color) band.style.setProperty(EV_COLOR_VAR, positioned.color);
+  return band;
 }
 
 export function renderPopover(

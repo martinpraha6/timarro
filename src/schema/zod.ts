@@ -39,6 +39,7 @@ export const timarroEventSchema = z.object({
   entities: z.array(z.string()).optional(),
   mediaUrls: z.array(z.string()).optional(),
   sourceRef: z.string().optional(),
+  color: z.string().optional(),
   order: z.number().optional(),
   timelineId: z.string().optional(),
   revision: z.number().optional(),
