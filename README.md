@@ -1,22 +1,37 @@
 # timarro
 
-Framework-agnostic web component for rendering historical timelines: `<timarro-timeline>`.
+[![npm](https://img.shields.io/npm/v/timarro)](https://www.npmjs.com/package/timarro)
+[![bundle](https://img.shields.io/badge/bundle-%E2%89%A4%2025%20kB-brightgreen)](https://www.npmjs.com/package/timarro)
+[![license](https://img.shields.io/npm/l/timarro)](./LICENSE)
+
+Framework-agnostic web component for historical timelines: **`<timarro-timeline>`**.
+
+Drop in JSON. Get a keyboard-accessible, precision-aware timeline that works in any stack — plain HTML, Next.js, Vue, a CMS embed.
 
 ![Timeline with precision-distinct markers: dots for exact dates, rings for months, diamonds for years, uncertainty bands, and a legend](./docs/screenshot.png)
 
-- **Zero dependencies, no framework** — a vanilla-TS [custom element](https://developer.mozilla.org/en-US/docs/Web/API/Web_components) that works in any page or stack (plain HTML, Next.js, Vue, CMS embeds, …).
-- **Data in, timeline out** — consumes a JSON document of events; where the data comes from is not the engine's business.
-- **Fuzzy dates are first-class** — events with year/month precision ("1943", "May 1943", "~1943") render visually distinct from exact dates: rings and diamonds instead of dots, uncertainty bands, gradient-faded range endpoints.
-- **Responsive** — horizontal lanes in wide containers, a vertical rail under 800px of _container_ (not viewport) width; or pin either mode.
-- **Accessible** — full keyboard navigation (arrows/Home/End across events, Enter opens details, Esc closes), ARIA throughout, `prefers-reduced-motion` respected.
+The open rendering layer of [timarro.com](https://timarro.com) — create, share, and embed visual timelines. Rendered timelines carry a small “Powered by Timarro” attribution.
 
-The engine is the open rendering layer of [timarro.com](https://timarro.com), a platform
-for creating, sharing, and embedding timelines. Rendered timelines carry a small
-"Powered by Timarro" link.
+---
+
+## Why Timarro
+
+- **Data in, timeline out** — consumes a JSON document of events. Where the data comes from is not the engine’s business.
+- **Fuzzy dates are first-class** — year, month, day, and datetime precision render as distinct markers (dots, rings, diamonds), with uncertainty bands, gradient-faded range endpoints, and optional `circa`.
+- **Zero runtime deps in the embed** — vanilla TypeScript [custom element](https://developer.mozilla.org/en-US/docs/Web/API/Web_components); ≤ 25 kB minified. An optional Zod schema ships on a separate subpath.
+- **Responsive by container** — horizontal lanes when wide; a vertical rail under 800px of *container* width (not viewport). Or pin either mode.
+- **Accessible** — arrow / Home / End across events, Enter opens details, Esc closes; ARIA throughout; `prefers-reduced-motion` respected.
+
+---
 
 ## Install
 
-Via a bundler:
+```bash
+npm install timarro
+# or: pnpm add timarro · yarn add timarro · bun add timarro
+```
+
+### Bundler
 
 ```ts
 import { define } from 'timarro';
@@ -28,35 +43,58 @@ define(); // registers <timarro-timeline>
 <timarro-timeline src="/data/apollo.json"></timarro-timeline>
 ```
 
-Plain HTML, self-registering from a CDN:
+Or import the side-effect entry:
+
+```ts
+import 'timarro/register';
+```
+
+### CDN (self-registering)
 
 ```html
 <script src="https://unpkg.com/timarro"></script>
 <timarro-timeline src="/data/apollo.json"></timarro-timeline>
 ```
 
-Or set data programmatically:
+Also available on [jsDelivr](https://www.jsdelivr.com/package/npm/timarro). The IIFE exposes `window.Timarro`.
+
+### Programmatic data
 
 ```ts
-document.querySelector('timarro-timeline').data = {
-  timeline: { id: '…', title: 'Apollo program' },
-  events: [/* … */],
+const el = document.querySelector('timarro-timeline');
+el.data = {
+  timeline: { id: 'tl-apollo', title: 'Apollo program' },
+  events: [
+    {
+      id: 'ev-first-step',
+      title: 'First step on the Moon',
+      date: { start: '1969-07-21T02:56:15Z', precision: 'datetime' },
+    },
+  ],
 };
 ```
 
-Next.js (custom elements don't SSR — define client-side):
+Setting `data` aborts any in-flight `src` fetch — the property wins.
+
+### Next.js
+
+Custom elements don’t SSR. Define client-side:
 
 ```tsx
 'use client';
+
 import { useEffect } from 'react';
 
 export default function Timeline() {
   useEffect(() => {
-    import('timarro').then((m) => m.define());
+    void import('timarro').then((m) => m.define());
   }, []);
+
   return <timarro-timeline src="/fixtures/apollo.json" />;
 }
 ```
+
+---
 
 ## API
 
@@ -73,9 +111,11 @@ export default function Timeline() {
 
 | Property | Type                          | Notes                                                     |
 | -------- | ----------------------------- | --------------------------------------------------------- |
-| `data`   | `TimarroTimelineData \| null` | set to render; reads back the last _valid_ data or `null` |
+| `data`   | `TimarroTimelineData \| null` | set to render; reads back the last *valid* data or `null` |
 
-### Events (bubbling, composed)
+### Events
+
+All bubble and are composed (`shadowRoot` → light DOM).
 
 | Event            | `detail`                | Fires when                                   |
 | ---------------- | ----------------------- | -------------------------------------------- |
@@ -83,24 +123,74 @@ export default function Timeline() {
 | `timarro:error`  | `{ message[, issues] }` | fetch failed or validation rejected the data |
 | `timarro:select` | `{ event }`             | an event marker is activated                 |
 
+```ts
+el.addEventListener('timarro:select', (e) => {
+  console.log(e.detail.event.title);
+});
+```
+
 ### Theming
 
-CSS custom properties: `--timarro-accent`, `--timarro-bg`, `--timarro-fg`,
-`--timarro-font`, `--timarro-error`, `--timarro-card-bg`, `--timarro-card-fg`.
+CSS custom properties on the host:
 
-Shadow parts for deeper styling: `::part(header | viewport | event | axis | card | legend | brand)`.
+| Token                   | Role                         |
+| ----------------------- | ---------------------------- |
+| `--timarro-accent`      | markers, ranges, brand link  |
+| `--timarro-bg`          | host background              |
+| `--timarro-fg`          | primary text                 |
+| `--timarro-muted`       | secondary text               |
+| `--timarro-border`      | rules and dividers           |
+| `--timarro-font`        | UI / body                    |
+| `--timarro-display-font`| title                        |
+| `--timarro-mono-font`   | dates and tick labels        |
+| `--timarro-error`       | validation / load errors     |
+| `--timarro-card-bg`     | event detail card            |
+| `--timarro-card-fg`     | event detail card text       |
+
+Shadow parts for deeper styling:
+`::part(header | viewport | event | axis | card | legend | brand)`.
 
 ```css
 timarro-timeline {
-  --timarro-accent: #9333ea;
-  --timarro-font: 'Iowan Old Style', serif;
+  --timarro-accent: #d6451b;
+  --timarro-display-font: 'Fraunces', Georgia, serif;
+  --timarro-font: 'IBM Plex Sans', system-ui, sans-serif;
+  --timarro-mono-font: 'IBM Plex Mono', ui-monospace, monospace;
 }
 ```
 
+Per-event accents: set `color` on an event (any CSS color). It overrides `--timarro-accent` for that event’s marker, range, and uncertainty band.
+
+---
+
 ## Data format (v1)
 
-The element consumes `{ timeline, events }` (full types in `timarro`, canonical Zod
-schema in `timarro/schema`). Event dates use a fuzzy-date grammar:
+Shape: `{ timeline, events }`. Full types live in `timarro`; the canonical Zod schema is `timarro/schema`.
+
+```json
+{
+  "timeline": {
+    "id": "tl-apollo",
+    "title": "Apollo program",
+    "description": "Key milestones of NASA's Apollo program, 1961–1972."
+  },
+  "events": [
+    {
+      "id": "ev-apollo-11-launch",
+      "title": "Apollo 11 launches from Kennedy Space Center",
+      "date": { "start": "1969-07-16T13:32:00Z", "precision": "datetime" },
+      "entities": ["Neil Armstrong", "Buzz Aldrin", "Michael Collins"]
+    },
+    {
+      "id": "ev-apollo-8",
+      "title": "Apollo 8 — first crewed lunar orbit",
+      "date": { "start": "1968-12-21", "end": "1968-12-27", "precision": "day" }
+    }
+  ]
+}
+```
+
+### Fuzzy dates
 
 | `date.start` / `date.end`              | `date.precision` | Rendered as                |
 | -------------------------------------- | ---------------- | -------------------------- |
@@ -114,27 +204,37 @@ Rules:
 - `precision` must match the granularity of `start` (validation error otherwise).
 - `end` is optional and may use a different granularity than `start`.
 - Date-only values are UTC calendar dates; naive datetimes are treated as UTC.
-- `"circa": true` marks an approximate date ("~1943") without widening its interval.
-- Every value resolves to a half-open interval `[earliest, latest)` — markers sit at the
-  midpoint, uncertainty bands span the interval.
+- `"circa": true` marks an approximate date (`~1943`) without widening its interval.
+- Every value resolves to a half-open interval `[earliest, latest)` — markers sit at the midpoint; uncertainty bands span the interval.
 - BCE dates are rejected in v1.
 
-Validation: the element validates on `data` set and renders the issues. Programmatic use:
+Optional event fields: `description`, `entities`, `mediaUrls` (http/https only), `sourceRef`, `color`, `order`.
+
+### Validation
+
+The element validates on `data` set and surfaces issues in the UI. For programmatic checks:
 
 ```ts
-import { validateTimelineData } from 'timarro'; // dependency-free, ships in the embed
+import { validateTimelineData } from 'timarro'; // dependency-free; ships in the embed
 import { timarroTimelineDataSchema } from 'timarro/schema'; // canonical Zod schema
 ```
 
+---
+
 ## Development
 
-```sh
+```bash
 pnpm install
-pnpm demo   # vite dev server with the demo page
-pnpm test   # vitest
-pnpm build  # tsup → dist/ (ESM + CJS + types + CDN bundle)
+pnpm demo     # vite dev server with the demo page
+pnpm test     # vitest
+pnpm build    # tsup → dist/ (ESM + CJS + types + CDN bundle)
+pnpm size     # assert ≤ 25 kB CDN bundle
 ```
+
+Requires Node ≥ 24.
+
+---
 
 ## License
 
-[MIT](./LICENSE)
+[MIT](./LICENSE) · [timarro.com](https://timarro.com) · [npm](https://www.npmjs.com/package/timarro)
