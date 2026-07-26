@@ -18,7 +18,7 @@ type State =
 type Orientation = 'horizontal' | 'vertical';
 
 /** Container width (px) below which `orientation="auto"` switches to vertical. */
-const VERTICAL_BREAKPOINT = 640;
+const VERTICAL_BREAKPOINT = 800;
 
 /**
  * SSR-safe base: importing this module in Node (e.g. to run the validator
@@ -33,7 +33,7 @@ const BaseElement: typeof HTMLElement =
  *
  * Attributes: `src` (JSON URL) · `locale` (BCP-47, default browser) ·
  * `orientation` (auto | horizontal | vertical; auto switches on container
- * width < 640px) · `legend` (M5). Setting the `data` property wins over `src`.
+ * width < 800px) · `legend` (M5). Setting the `data` property wins over `src`.
  *
  * Keyboard: arrow keys move focus chronologically between event markers
  * (roving tabindex), Home/End jump to the first/last event, Enter/Space
@@ -204,7 +204,16 @@ export class TimarroTimeline extends BaseElement {
     header.className = 'header';
     header.setAttribute('part', 'header');
     header.textContent = state.data.timeline.title;
-    container.append(header);
+    const heading = document.createElement('header');
+    heading.className = 'heading';
+    heading.append(header);
+    if (state.data.timeline.description) {
+      const description = document.createElement('p');
+      description.className = 'description';
+      description.textContent = state.data.timeline.description;
+      heading.append(description);
+    }
+    container.append(heading);
 
     if (state.normalized.domain === null) {
       container.append(this.#statusBox('timarro: timeline has no events'));

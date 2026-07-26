@@ -52,7 +52,13 @@ export function renderVerticalTimeline(
     const date = document.createElement('span');
     date.className = 'vdate';
     date.textContent = formatEventDate(ev, ctx.locale);
-    body.append(label, date);
+    body.append(date, label);
+    if (ev.src.description) {
+      const description = document.createElement('span');
+      description.className = 'vdesc';
+      description.textContent = ev.src.description;
+      body.append(description);
+    }
 
     item.append(marker, body);
     list.append(item);

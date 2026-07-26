@@ -7,7 +7,7 @@ Framework-agnostic web component for rendering historical timelines: `<timarro-t
 - **Zero dependencies, no framework** — a vanilla-TS [custom element](https://developer.mozilla.org/en-US/docs/Web/API/Web_components) that works in any page or stack (plain HTML, Next.js, Vue, CMS embeds, …).
 - **Data in, timeline out** — consumes a JSON document of events; where the data comes from is not the engine's business.
 - **Fuzzy dates are first-class** — events with year/month precision ("1943", "May 1943", "~1943") render visually distinct from exact dates: rings and diamonds instead of dots, uncertainty bands, gradient-faded range endpoints.
-- **Responsive** — horizontal lanes in wide containers, a vertical rail under 640px of _container_ (not viewport) width; or pin either mode.
+- **Responsive** — horizontal lanes in wide containers, a vertical rail under 800px of _container_ (not viewport) width; or pin either mode.
 - **Accessible** — full keyboard navigation (arrows/Home/End across events, Enter opens details, Esc closes), ARIA throughout, `prefers-reduced-motion` respected.
 
 The engine is the open rendering layer of [timarro.com](https://timarro.com), a platform
@@ -66,7 +66,7 @@ export default function Timeline() {
 | ------------- | ------------------------------------ | -------------- | --------------------------------------------------------- |
 | `src`         | URL of a timeline JSON document      | —              | fetched with abort-on-change; the `data` property wins    |
 | `locale`      | BCP-47 tag (`en`, `cs`, `de-AT`, …)  | browser locale | all dates format via `Intl` in UTC                        |
-| `orientation` | `auto` \| `horizontal` \| `vertical` | `auto`         | `auto` switches to vertical when the container is < 640px |
+| `orientation` | `auto` \| `horizontal` \| `vertical` | `auto`         | `auto` switches to vertical when the container is < 800px |
 | `legend`      | `false` / `off` to hide              | shown          | compact key for the precision marker shapes               |
 
 ### Properties

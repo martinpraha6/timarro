@@ -1,19 +1,19 @@
 import type { ResolvedEvent } from '../model/normalize';
 import { formatEventAria, formatEventDate } from './format';
 
-export const LANE_HEIGHT = 36;
-export const AXIS_HEIGHT = 30;
-export const CANVAS_TOP_PAD = 4;
-export const POPOVER_WIDTH = 280;
+export const LANE_HEIGHT = 52;
+export const AXIS_HEIGHT = 42;
+export const CANVAS_TOP_PAD = 14;
+export const POPOVER_WIDTH = 320;
 
 /** Range layout: labeled bars live in their own region below the point events. */
 export const RANGE_BAR_HEIGHT = 10;
 /** Height of a single range's bar row (bar vertically centred within). */
-export const RANGE_ROW_HEIGHT = 22;
+export const RANGE_ROW_HEIGHT = 38;
 /** Vertical stride between stacked range lanes (row + gap). */
-export const RANGE_LANE_HEIGHT = 26;
+export const RANGE_LANE_HEIGHT = 44;
 /** Gap between the point-events region and the ranges region below it. */
-export const RANGES_TOP_GAP = 8;
+export const RANGES_TOP_GAP = 14;
 
 /** CSS custom property carrying a per-event accent (see {@link safeCssColor}). */
 const EV_COLOR_VAR = '--ev-color';
@@ -127,15 +127,23 @@ export function renderEvent(
   marker.setAttribute('aria-expanded', 'false');
   marker.addEventListener('click', () => onSelect(positioned.ev, marker));
 
+  const copy = document.createElement('span');
+  copy.className = 'event-copy';
+
   const label = document.createElement('span');
   label.className = 'label';
-  // "~" is the at-a-glance circa affordance (the date itself lives in the popover).
+  // "~" is the at-a-glance circa affordance.
   label.textContent =
     positioned.ev.src.date.circa === true
       ? `~ ${positioned.ev.src.title}`
       : positioned.ev.src.title;
 
-  item.append(marker, label);
+  const date = document.createElement('span');
+  date.className = 'event-date';
+  date.textContent = formatEventDate(positioned.ev, locale);
+
+  copy.append(label, date);
+  item.append(marker, copy);
   return item;
 }
 

@@ -11,7 +11,7 @@ test('auto orientation switches with container width — both directions', async
   await expect(page.locator('#apollo .canvas')).toHaveCount(1);
   await expect(page.locator('#apollo .vlist')).toHaveCount(0);
 
-  // 320px viewport → container well under the 640px breakpoint → vertical rail.
+  // 320px viewport → container well under the 800px breakpoint → vertical rail.
   await page.setViewportSize({ width: 320, height: 900 });
   await expect(page.locator('#apollo .vlist')).toHaveCount(1);
   await expect(page.locator('#apollo .canvas')).toHaveCount(0);
