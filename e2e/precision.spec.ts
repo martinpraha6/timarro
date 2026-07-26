@@ -23,9 +23,10 @@ test('marker shapes are distinct per precision', async ({ page }) => {
   await expect(showcase.locator('.marker--year')).toHaveCount(2); // year + circa year
   await expect(showcase.locator('.marker--range')).toHaveCount(2);
 
-  // Ring: transparent center, visible border. Diamond: rotated.
+  // Ring: opaque card-bg center (masks the axis), accent border. Diamond: rotated.
   const month = showcase.locator('.marker--month').first();
-  await expect(month).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  await expect(month).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+  await expect(month).toHaveCSS('border-top-width', '3px');
   const year = showcase.locator('.marker--year').first();
   const transform = await year.evaluate((el) => getComputedStyle(el).transform);
   expect(transform).not.toBe('none');
