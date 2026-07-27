@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { PRECISIONS, SOURCE_TYPES, VISIBILITIES } from './literals';
 import { explainDateProblem } from './validate';
 
 /**
@@ -8,13 +9,18 @@ import { explainDateProblem } from './validate';
  * {@link explainDateProblem}, the same function the dependency-free runtime
  * validator uses — one grammar implementation, two validation surfaces.
  *
+ * Enumerated values come from {@link ./literals} so they cannot drift from the
+ * hand-rolled validator.
+ *
  * MUST NOT be imported from the core element entry (src/index.ts / src/element.ts):
  * the embed bundle ships zod-free.
  */
 
-export const precisionSchema = z.enum(['year', 'month', 'day', 'datetime']);
+export const precisionSchema = z.enum(PRECISIONS);
 
-export const sourceTypeSchema = z.enum(['manual', 'text', 'json', 'video', 'audio']);
+export const sourceTypeSchema = z.enum(SOURCE_TYPES);
+
+export const visibilitySchema = z.enum(VISIBILITIES);
 
 export const timarroDateSchema = z
   .object({
@@ -50,7 +56,7 @@ export const timelineMetaSchema = z.object({
   description: z.string().optional(),
   coverImageUrl: z.string().optional(),
   createdBy: z.string().optional(),
-  visibility: z.enum(['public', 'unlisted', 'private']).optional(),
+  visibility: visibilitySchema.optional(),
   sourceTypes: z.array(sourceTypeSchema).optional(),
 });
 

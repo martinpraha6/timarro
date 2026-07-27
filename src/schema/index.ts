@@ -4,9 +4,11 @@
  * import this module from src/index.ts or src/element.ts.
  */
 export type * from './types';
+export { PRECISIONS, SOURCE_TYPES, VISIBILITIES } from './literals';
 export {
   precisionSchema,
   sourceTypeSchema,
+  visibilitySchema,
   timarroDateSchema,
   timarroEventSchema,
   timelineMetaSchema,

@@ -8,11 +8,13 @@
  * Optional fields are typed as `T | undefined` (not bare `T?`) so they stay
  * assignable under `exactOptionalPropertyTypes` with Zod's `.optional()` inference
  * and with values that may be explicitly `undefined`.
+ *
+ * Enumerated string unions live in {@link ./literals} so the runtime validator and
+ * Zod schema share one source of truth.
  */
 
-export type Precision = 'year' | 'month' | 'day' | 'datetime';
-
-export type SourceType = 'manual' | 'text' | 'json' | 'video' | 'audio';
+export type { Precision, SourceType, Visibility } from './literals';
+import type { Precision, SourceType, Visibility } from './literals';
 
 /**
  * Fuzzy-date grammar (v1):
@@ -63,7 +65,7 @@ export interface TimelineMeta {
   description?: string | undefined;
   coverImageUrl?: string | undefined;
   createdBy?: string | undefined;
-  visibility?: 'public' | 'unlisted' | 'private' | undefined;
+  visibility?: Visibility | undefined;
   sourceTypes?: SourceType[] | undefined;
 }
 
