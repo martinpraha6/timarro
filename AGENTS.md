@@ -7,6 +7,7 @@ web component plus an interactive Vite demo under `demo/`. All scripts live in
 `package.json`; the CI pipeline is `.github/workflows/ci.yml`.
 
 ### Runtime / toolchain (non-obvious)
+
 - Requires **Node 24** (`.nvmrc` = `24`, `engines.node >= 24`) and **pnpm 10.34.5**
   (`packageManager` field, provisioned via `corepack`).
 - The VM's baseline `node` (`/exec-daemon/node`) is v22. Node 24 is provided through
@@ -16,6 +17,7 @@ web component plus an interactive Vite demo under `demo/`. All scripts live in
   `pnpm install --frozen-lockfile`) relies on this.
 
 ### Running the app + tests (see `package.json` scripts)
+
 - Demo app: `pnpm demo` → Vite dev server at http://localhost:5173 serving `demo/`
   with local JSON fixtures in `demo/data/`. This is the runnable application.
 - Unit tests: `pnpm test` (Vitest + happy-dom, no server needed).
@@ -26,6 +28,7 @@ web component plus an interactive Vite demo under `demo/`. All scripts live in
 - Build/size: `pnpm build` (tsup), `pnpm size`, `pnpm check:bundle`.
 
 ### Known gotchas
+
 - `pnpm lint` (`eslint . && prettier --check .`) currently reports a **pre-existing**
   Prettier formatting warning on `README.md`; ESLint itself passes. This is unrelated
   to environment setup.
