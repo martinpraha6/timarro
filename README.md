@@ -19,7 +19,7 @@ The open rendering layer of [timarro.com](https://timarro.com) — create, share
 - **Data in, timeline out** — consumes a JSON document of events. Where the data comes from is not the engine’s business.
 - **Fuzzy dates are first-class** — year, month, day, and datetime precision render as distinct markers (dots, rings, diamonds), with uncertainty bands, gradient-faded range endpoints, and optional `circa`.
 - **Zero runtime deps in the embed** — vanilla TypeScript [custom element](https://developer.mozilla.org/en-US/docs/Web/API/Web_components); ≤ 25 kB minified. An optional Zod schema ships on a separate subpath.
-- **Responsive by container** — horizontal lanes when wide; a vertical rail under 800px of *container* width (not viewport). Or pin either mode.
+- **Responsive by container** — horizontal lanes when wide; a vertical rail under 800px of _container_ width (not viewport). Or pin either mode.
 - **Accessible** — arrow / Home / End across events, Enter opens details, Esc closes; ARIA throughout; `prefers-reduced-motion` respected.
 
 ---
@@ -111,7 +111,7 @@ export default function Timeline() {
 
 | Property | Type                          | Notes                                                     |
 | -------- | ----------------------------- | --------------------------------------------------------- |
-| `data`   | `TimarroTimelineData \| null` | set to render; reads back the last *valid* data or `null` |
+| `data`   | `TimarroTimelineData \| null` | set to render; reads back the last _valid_ data or `null` |
 
 ### Events
 
@@ -133,19 +133,19 @@ el.addEventListener('timarro:select', (e) => {
 
 CSS custom properties on the host:
 
-| Token                   | Role                         |
-| ----------------------- | ---------------------------- |
-| `--timarro-accent`      | markers, ranges, brand link  |
-| `--timarro-bg`          | host background              |
-| `--timarro-fg`          | primary text                 |
-| `--timarro-muted`       | secondary text               |
-| `--timarro-border`      | rules and dividers           |
-| `--timarro-font`        | UI / body                    |
-| `--timarro-display-font`| title                        |
-| `--timarro-mono-font`   | dates and tick labels        |
-| `--timarro-error`       | validation / load errors     |
-| `--timarro-card-bg`     | event detail card            |
-| `--timarro-card-fg`     | event detail card text       |
+| Token                    | Role                        |
+| ------------------------ | --------------------------- |
+| `--timarro-accent`       | markers, ranges, brand link |
+| `--timarro-bg`           | host background             |
+| `--timarro-fg`           | primary text                |
+| `--timarro-muted`        | secondary text              |
+| `--timarro-border`       | rules and dividers          |
+| `--timarro-font`         | UI / body                   |
+| `--timarro-display-font` | title                       |
+| `--timarro-mono-font`    | dates and tick labels       |
+| `--timarro-error`        | validation / load errors    |
+| `--timarro-card-bg`      | event detail card           |
+| `--timarro-card-fg`      | event detail card text      |
 
 Shadow parts for deeper styling:
 `::part(header | viewport | event | axis | card | legend | brand)`.
