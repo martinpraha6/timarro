@@ -9,6 +9,7 @@
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noUncheckedSideEffectImports": true,
+    "exactOptionalPropertyTypes": true,
     "erasableSyntaxOnly": true,
     "libReplacement": false,
     "noEmit": true,

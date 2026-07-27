@@ -18,7 +18,7 @@ import {
 export type { PositionedEvent } from './event-card';
 
 export interface RenderContext {
-  locale?: string;
+  locale?: string | undefined;
   onSelect(ev: ResolvedEvent, anchor: HTMLElement): void;
 }
 

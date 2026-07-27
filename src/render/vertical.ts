@@ -3,7 +3,7 @@ import { markerShapeClass, safeCssColor } from './event-card';
 import { formatEventAria, formatEventDate } from './format';
 
 export interface VerticalRenderContext {
-  locale?: string;
+  locale?: string | undefined;
   onSelect(ev: ResolvedEvent, anchor: HTMLElement): void;
 }
 
