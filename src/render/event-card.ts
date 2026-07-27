@@ -40,17 +40,17 @@ export interface PositionedEvent {
   extent: [number, number];
   lane: number;
   /** Fuzzy points: canvas-px span of the start uncertainty interval. */
-  band?: [number, number];
+  band?: [number, number] | undefined;
   /** Ranges: px width of the endpoint fade when that endpoint is fuzzy. */
-  fadeLeft?: number;
-  fadeRight?: number;
+  fadeLeft?: number | undefined;
+  fadeRight?: number | undefined;
   /**
    * Ranges only: the full-height translucent band drawn behind the events the
    * range spans. Height grows with overlap depth so stacked ranges stay legible.
    */
-  rangeBand?: { left: number; width: number; top: number; height: number };
+  rangeBand?: { left: number; width: number; top: number; height: number } | undefined;
   /** Sanitized per-event accent, or undefined to inherit the host accent. */
-  color?: string;
+  color?: string | undefined;
 }
 
 /**

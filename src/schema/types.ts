@@ -4,6 +4,10 @@
  * Platform bookkeeping fields (`timelineId`, `revision`, `createdBy`, `visibility`,
  * `sourceTypes`) are optional here: the renderer must not require them to draw.
  * Unknown extra fields are ignored by validation.
+ *
+ * Optional fields are typed as `T | undefined` (not bare `T?`) so they stay
+ * assignable under `exactOptionalPropertyTypes` with Zod's `.optional()` inference
+ * and with values that may be explicitly `undefined`.
  */
 
 export type Precision = 'year' | 'month' | 'day' | 'datetime';
@@ -25,42 +29,42 @@ export type SourceType = 'manual' | 'text' | 'json' | 'video' | 'audio';
  */
 export interface TimarroDate {
   start: string;
-  end?: string;
+  end?: string | undefined;
   precision: Precision;
-  circa?: boolean;
+  circa?: boolean | undefined;
 }
 
 export interface TimarroEvent {
   id: string;
   title: string;
   date: TimarroDate;
-  description?: string;
+  description?: string | undefined;
   /** Free-text people/places/orgs (v1 — no normalized entity table yet). */
-  entities?: string[];
+  entities?: string[] | undefined;
   /** Only http(s) URLs are rendered; others are dropped at render time. */
-  mediaUrls?: string[];
+  mediaUrls?: string[] | undefined;
   /** Pointer back into the original source (timestamp, page, …) — shown as plain text. */
-  sourceRef?: string;
+  sourceRef?: string | undefined;
   /**
    * Optional per-event accent (any CSS color: `#d6451b`, `rebeccapurple`,
    * `rgb(…)`, …). Overrides `--timarro-accent` for this event's marker, range
    * band, and uncertainty band. Invalid values are ignored at render time.
    */
-  color?: string;
+  color?: string | undefined;
   /** Sort tie-break for events with identical start instants (default 0). */
-  order?: number;
-  timelineId?: string;
-  revision?: number;
+  order?: number | undefined;
+  timelineId?: string | undefined;
+  revision?: number | undefined;
 }
 
 export interface TimelineMeta {
   id: string;
   title: string;
-  description?: string;
-  coverImageUrl?: string;
-  createdBy?: string;
-  visibility?: 'public' | 'unlisted' | 'private';
-  sourceTypes?: SourceType[];
+  description?: string | undefined;
+  coverImageUrl?: string | undefined;
+  createdBy?: string | undefined;
+  visibility?: 'public' | 'unlisted' | 'private' | undefined;
+  sourceTypes?: SourceType[] | undefined;
 }
 
 export interface TimarroTimelineData {

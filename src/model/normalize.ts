@@ -5,9 +5,9 @@ import { parseFuzzyDate, resolveInstant, type DateParts, type ResolvedInstant } 
 export interface ResolvedEvent {
   src: TimarroEvent;
   start: ResolvedInstant;
-  end?: ResolvedInstant;
+  end?: ResolvedInstant | undefined;
   startParts: DateParts;
-  endParts?: DateParts;
+  endParts?: DateParts | undefined;
   /** True when the event carries visible uncertainty: year/month precision or `circa`. */
   fuzzy: boolean;
 }
