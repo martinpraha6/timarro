@@ -27,5 +27,5 @@ if (broken) {
         date: { start: '1943', precision: 'day' },
       },
     ],
-  } as TimarroTimelineData;
+  };
 }

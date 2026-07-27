@@ -80,7 +80,7 @@ describe('<timarro-timeline>', () => {
     el.data = {
       timeline: { id: 't', title: 'Injection' },
       events: [{ id: 'e', title: hostile, date: { start: '1969-07-21', precision: 'day' } }],
-    } as TimarroTimelineData;
+    };
     expect(el.shadowRoot!.querySelector('img')).toBeNull();
     expect(el.shadowRoot!.textContent).toContain(hostile);
     el.remove();
@@ -98,7 +98,7 @@ describe('<timarro-timeline>', () => {
           mediaUrls: ['javascript:alert(1)', 'https://example.com/x.png'],
         },
       ],
-    } as TimarroTimelineData;
+    };
     el.shadowRoot!.querySelector<HTMLButtonElement>('.marker')?.click();
     const images = [...el.shadowRoot!.querySelectorAll('img')];
     expect(images).toHaveLength(1);
@@ -111,7 +111,7 @@ describe('<timarro-timeline>', () => {
     el.data = {
       timeline: { id: 't', title: 'Broken' },
       events: [{ id: 'e', title: 'E', date: { start: '1943', precision: 'day' } }],
-    } as TimarroTimelineData;
+    };
     const text = el.shadowRoot?.textContent ?? '';
     expect(text).toContain('invalid data');
     expect(text).toContain('events[0].date.precision');
@@ -270,7 +270,7 @@ describe('fuzzy-date visual treatment (M5)', () => {
           date: { start: '1910-05-01', end: '1913-09-30', precision: 'day' },
         },
       ],
-    } as TimarroTimelineData;
+    };
     const bar = el.shadowRoot!.querySelector<HTMLElement>('.marker--range')!;
     expect(bar.style.background).toBe('');
     el.remove();
@@ -359,7 +359,7 @@ describe('per-event color', () => {
           color: '#2563eb',
         },
       ],
-    } as TimarroTimelineData;
+    };
     const root = el.shadowRoot!;
     const point = root.querySelector<HTMLElement>('[data-event-id="p"]')!;
     expect(point.style.getPropertyValue('--ev-color')).toBe('#0d9488');
@@ -380,7 +380,7 @@ describe('per-event color', () => {
           color: 'red; url(evil)',
         },
       ],
-    } as TimarroTimelineData;
+    };
     const point = el.shadowRoot!.querySelector<HTMLElement>('[data-event-id="p"]')!;
     expect(point.style.getPropertyValue('--ev-color')).toBe('');
     el.remove();
