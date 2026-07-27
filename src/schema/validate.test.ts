@@ -8,9 +8,10 @@ interface InvalidFixture {
   data: unknown;
 }
 
-const invalidFixtures = import.meta.glob('../../test/fixtures/invalid/*.json', {
-  eager: true,
-}) as Record<string, { default: InvalidFixture }>;
+const invalidFixtures = import.meta.glob<{ default: InvalidFixture }>(
+  '../../test/fixtures/invalid/*.json',
+  { eager: true },
+);
 
 describe('validateTimelineData — valid fixtures', () => {
   it('accepts the Apollo fixture', () => {

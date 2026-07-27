@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import type { TimarroDate } from './types';
 import { explainDateProblem } from './validate';
 
 /**
@@ -25,7 +24,7 @@ export const timarroDateSchema = z
     circa: z.boolean().optional(),
   })
   .superRefine((date, ctx) => {
-    const problem = explainDateProblem(date as TimarroDate);
+    const problem = explainDateProblem(date);
     if (problem) {
       ctx.addIssue({ code: 'custom', path: [problem.field], message: problem.message });
     }

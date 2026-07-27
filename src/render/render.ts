@@ -19,7 +19,7 @@ export type { PositionedEvent } from './event-card';
 
 export interface RenderContext {
   locale?: string | undefined;
-  onSelect(ev: ResolvedEvent, anchor: HTMLElement): void;
+  onSelect: (ev: ResolvedEvent, anchor: HTMLElement) => void;
 }
 
 const MAX_LABEL_PX = 180;

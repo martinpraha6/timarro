@@ -4,7 +4,7 @@ import { formatEventAria, formatEventDate } from './format';
 
 export interface VerticalRenderContext {
   locale?: string | undefined;
-  onSelect(ev: ResolvedEvent, anchor: HTMLElement): void;
+  onSelect: (ev: ResolvedEvent, anchor: HTMLElement) => void;
 }
 
 /**

@@ -6,9 +6,11 @@ import type { TimarroTimelineData } from './types';
 import { validateTimelineData } from './validate';
 import { timarroTimelineDataSchema } from './zod';
 
-const invalidFixtures = import.meta.glob('../../test/fixtures/invalid/*.json', {
+const invalidFixtures = import.meta.glob<{
+  default: { expectIssueContaining: string; data: unknown };
+}>('../../test/fixtures/invalid/*.json', {
   eager: true,
-}) as Record<string, { default: { expectIssueContaining: string; data: unknown } }>;
+});
 
 /**
  * The hand-rolled validator (shipped in the embed bundle) and the canonical Zod
