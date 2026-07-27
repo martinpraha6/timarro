@@ -1,5 +1,6 @@
 import { parseFuzzyDate, resolveInstant } from '../model/date';
-import type { Precision, SourceType, TimarroDate, TimarroTimelineData } from './types';
+import { PRECISIONS, SOURCE_TYPES, VISIBILITIES } from './literals';
+import type { Precision, TimarroDate, TimarroTimelineData } from './types';
 
 /**
  * Dependency-free structural validator — used by the element at runtime so the
@@ -19,10 +20,6 @@ export interface ValidationIssue {
 
 export type ValidationResult =
   { ok: true; data: TimarroTimelineData } | { ok: false; issues: ValidationIssue[] };
-
-const PRECISIONS: readonly Precision[] = ['year', 'month', 'day', 'datetime'];
-const SOURCE_TYPES: readonly SourceType[] = ['manual', 'text', 'json', 'video', 'audio'];
-const VISIBILITIES = ['public', 'unlisted', 'private'] as const;
 
 /**
  * The single source of truth for date-field semantics (grammar, precision match,
