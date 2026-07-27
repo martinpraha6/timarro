@@ -25,7 +25,7 @@ web component plus an interactive Vite demo under `demo/`. All scripts live in
   Requires the Chromium browser build; if missing run
   `pnpm exec playwright install chromium --with-deps` (browsers cache under
   `~/.cache/ms-playwright` and persist in the snapshot).
-- Build/size: `pnpm build` (tsdown), `pnpm size`, `pnpm check:bundle`.
+- Build/size: `pnpm build` (tsdown), `pnpm size`, `pnpm check:bundle`, `pnpm check:package`.
 
 ### Known gotchas
 

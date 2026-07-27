@@ -20,5 +20,6 @@ jobs:
       - run: pnpm build
       - run: pnpm size
       - run: pnpm check:bundle
+      - run: pnpm check:package
       - run: pnpm exec playwright install chromium --with-deps
       - run: pnpm test:e2e
