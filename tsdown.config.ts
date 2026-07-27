@@ -1,4 +1,4 @@
-import { defineConfig } from 'tsup';
+import { defineConfig } from 'tsdown';
 
 export default defineConfig([
   {
@@ -10,7 +10,6 @@ export default defineConfig([
     format: ['esm', 'cjs'],
     dts: true,
     sourcemap: true,
-    clean: true,
     target: 'es2022',
     platform: 'browser',
   },
@@ -21,8 +20,11 @@ export default defineConfig([
     globalName: 'Timarro',
     minify: true,
     sourcemap: true,
+    dts: false,
     target: 'es2022',
     platform: 'browser',
-    outExtension: () => ({ js: '.js' }),
+    outputOptions: {
+      entryFileNames: '[name].js',
+    },
   },
 ]);
