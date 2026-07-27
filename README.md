@@ -227,7 +227,7 @@ import { timarroTimelineDataSchema } from 'timarro/schema'; // canonical Zod sch
 pnpm install
 pnpm demo     # vite dev server with the demo page
 pnpm test     # vitest
-pnpm build    # tsup → dist/ (ESM + CJS + types + CDN bundle)
+pnpm build    # tsdown → dist/ (ESM + CJS + types + CDN bundle)
 pnpm size     # assert ≤ 25 kB CDN bundle
 ```
 
