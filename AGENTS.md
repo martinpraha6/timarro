@@ -20,7 +20,7 @@ web component plus an interactive Vite demo under `demo/`. All scripts live in
 
 - Demo app: `pnpm demo` → Vite dev server at http://localhost:5173 serving `demo/`
   with local JSON fixtures in `demo/data/`. This is the runnable application.
-- Unit tests: `pnpm test` (Vitest + happy-dom, no server needed).
+- Unit tests: `pnpm test` (Vitest + happy-dom, no server needed). Coverage gate: `pnpm test:coverage`.
 - E2E: `pnpm test:e2e` (Playwright auto-starts the Vite demo via `playwright.config.ts`).
   Requires the Chromium browser build; if missing run
   `pnpm exec playwright install chromium --with-deps` (browsers cache under
