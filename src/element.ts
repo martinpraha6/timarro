@@ -59,7 +59,9 @@ export class TimarroTimeline extends BaseElement {
   #renderedOrientation: Orientation | null = null;
   #openEventId: string | null = null;
   #openAnchor: HTMLElement | null = null;
-  #onDocumentClick = (event: MouseEvent): void => this.#handleDocumentClick(event);
+  #onDocumentClick = (event: MouseEvent): void => {
+    this.#handleDocumentClick(event);
+  };
   #onDocumentKeydown = (event: KeyboardEvent): void => {
     if (event.key === 'Escape') this.#closePopover(true);
   };
@@ -70,7 +72,9 @@ export class TimarroTimeline extends BaseElement {
     applyStyles(this.#root);
     this.#container = document.createElement('div');
     this.#container.className = 'container';
-    this.#container.addEventListener('keydown', (event) => this.#handleMarkerKeydown(event));
+    this.#container.addEventListener('keydown', (event) => {
+      this.#handleMarkerKeydown(event);
+    });
     this.#root.append(this.#container);
   }
 
@@ -229,7 +233,9 @@ export class TimarroTimeline extends BaseElement {
     viewport.setAttribute('part', 'viewport');
     const ctx = {
       locale: this.getAttribute('locale') ?? undefined,
-      onSelect: (ev: ResolvedEvent, anchor: HTMLElement) => this.#togglePopover(ev, anchor),
+      onSelect: (ev: ResolvedEvent, anchor: HTMLElement) => {
+        this.#togglePopover(ev, anchor);
+      },
     };
     if (orientation === 'vertical') {
       renderVerticalTimeline(viewport, state.normalized, ctx);
@@ -330,9 +336,9 @@ export class TimarroTimeline extends BaseElement {
     }
     this.#closePopover();
 
-    const popover = renderPopover(ev, this.getAttribute('locale') ?? undefined, () =>
-      this.#closePopover(true),
-    );
+    const popover = renderPopover(ev, this.getAttribute('locale') ?? undefined, () => {
+      this.#closePopover(true);
+    });
     // Positioned from the anchor's rect relative to .container (works in both
     // orientations, and rect math already accounts for the viewport's scroll).
     // Appended to .container, not the canvas — the viewport's overflow clipping

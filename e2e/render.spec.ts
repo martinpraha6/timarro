@@ -55,7 +55,9 @@ test('a failing src fetch renders an error and dispatches timarro:error', async 
         el.id = 'missing';
         el.addEventListener(
           'timarro:error',
-          (event) => resolve((event as CustomEvent<{ message: string }>).detail.message),
+          (event) => {
+            resolve((event as CustomEvent<{ message: string }>).detail.message);
+          },
           { once: true },
         );
         el.setAttribute('src', '/does-not-exist.json');

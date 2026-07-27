@@ -125,7 +125,9 @@ export function renderEvent(
   marker.setAttribute('aria-label', formatEventAria(positioned.ev, locale));
   marker.setAttribute('aria-haspopup', 'dialog');
   marker.setAttribute('aria-expanded', 'false');
-  marker.addEventListener('click', () => onSelect(positioned.ev, marker));
+  marker.addEventListener('click', () => {
+    onSelect(positioned.ev, marker);
+  });
 
   const copy = document.createElement('span');
   copy.className = 'event-copy';

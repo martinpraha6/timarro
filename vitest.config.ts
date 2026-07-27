@@ -18,10 +18,10 @@ export default defineConfig({
       ],
       // Baseline from the current suite; leave a little headroom, fail on real drops.
       thresholds: {
-        statements: 85,
-        branches: 75,
+        statements: 90,
+        branches: 80,
         functions: 90,
-        lines: 85,
+        lines: 90,
       },
     },
   },

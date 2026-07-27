@@ -81,4 +81,98 @@ describe('validateTimelineData — behavior', () => {
     });
     expect(result.ok).toBe(true);
   });
+
+  it('rejects a non-object timeline and a non-array events field', () => {
+    const result = validateTimelineData({ timeline: 'nope', events: 'nope' });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.issues.map((i) => i.path)).toEqual(
+        expect.arrayContaining(['timeline', 'events']),
+      );
+    }
+  });
+
+  it('rejects malformed event and date shapes', () => {
+    const result = validateTimelineData({
+      timeline: { id: 't', title: 'T' },
+      events: [
+        'not-an-event',
+        { id: 'e1', title: 'E1', date: 'not-a-date' },
+        {
+          id: 'e2',
+          title: 'E2',
+          date: { start: 1943, precision: 'decade', end: 1950, circa: 'yes' },
+        },
+      ],
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      const paths = result.issues.map((i) => i.path);
+      expect(paths).toContain('events[0]');
+      expect(paths).toContain('events[1].date');
+      expect(paths).toEqual(
+        expect.arrayContaining([
+          'events[2].date.start',
+          'events[2].date.precision',
+          'events[2].date.end',
+          'events[2].date.circa',
+        ]),
+      );
+    }
+  });
+
+  it('rejects bad optional field types on timeline and events', () => {
+    const result = validateTimelineData({
+      timeline: {
+        id: 't',
+        title: 'T',
+        description: 1,
+        visibility: 'secret',
+        sourceTypes: 'manual',
+      },
+      events: [
+        {
+          id: 'e',
+          title: 'E',
+          date: { start: '1969', precision: 'year' },
+          order: Number.NaN,
+          entities: [42],
+          mediaUrls: 'https://example.com/x.png',
+        },
+      ],
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      const paths = result.issues.map((i) => i.path);
+      expect(paths).toEqual(
+        expect.arrayContaining([
+          'timeline.description',
+          'timeline.visibility',
+          'timeline.sourceTypes',
+          'events[0].order',
+          'events[0].entities[0]',
+          'events[0].mediaUrls',
+        ]),
+      );
+    }
+  });
+
+  it('rejects invalid sourceTypes entries and end dates that fail to parse', () => {
+    const result = validateTimelineData({
+      timeline: { id: 't', title: 'T', sourceTypes: ['manual', 'carrier-pigeon'] },
+      events: [
+        {
+          id: 'e',
+          title: 'E',
+          date: { start: '1969-07-21', end: 'not-a-date', precision: 'day' },
+        },
+      ],
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      const rendered = result.issues.map((i) => `${i.path}: ${i.message}`);
+      expect(rendered.some((line) => line.includes('timeline.sourceTypes[1]'))).toBe(true);
+      expect(rendered.some((line) => line.includes('events[0].date.end'))).toBe(true);
+    }
+  });
 });

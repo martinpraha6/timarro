@@ -42,7 +42,9 @@ export function renderVerticalTimeline(
     marker.setAttribute('aria-label', formatEventAria(ev, ctx.locale));
     marker.setAttribute('aria-haspopup', 'dialog');
     marker.setAttribute('aria-expanded', 'false');
-    marker.addEventListener('click', () => ctx.onSelect(ev, marker));
+    marker.addEventListener('click', () => {
+      ctx.onSelect(ev, marker);
+    });
 
     const body = document.createElement('div');
     body.className = 'vbody';
