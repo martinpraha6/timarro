@@ -29,9 +29,10 @@ web component plus an interactive Vite demo under `demo/`. All scripts live in
 
 ### Known gotchas
 
-- `pnpm lint` (`eslint . && prettier --check .`) currently reports a **pre-existing**
-  Prettier formatting warning on `README.md`; ESLint itself passes. This is unrelated
-  to environment setup.
+- `pnpm lint` runs `eslint . && prettier --check .` over the **whole repo**, including
+  Markdown. Prettier formatting failures (e.g. an unformatted `README.md`/`AGENTS.md`)
+  fail CI even though ESLint passes — run `pnpm format` (`prettier --write .`) before
+  committing.
 - `pnpm install` prints an "Ignored build scripts: esbuild" warning. It is harmless —
   esbuild resolves its binary from the platform `@esbuild/*` optional dependency, and
   build/test/demo all work.
