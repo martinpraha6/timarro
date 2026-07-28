@@ -17,10 +17,11 @@ The open rendering layer of [timarro.com](https://timarro.com) — create, share
 ## Why Timarro
 
 - **Data in, timeline out** — consumes a JSON document of events. Where the data comes from is not the engine’s business.
-- **Fuzzy dates are first-class** — year, month, day, and datetime precision render as distinct markers (dots, rings, diamonds), with uncertainty bands, gradient-faded range endpoints, and optional `circa`.
+- **Fuzzy dates are first-class** — year, month, day, and datetime precision render as distinct markers (diamonds, rings, dots), with uncertainty bands, gradient-faded range endpoints, and optional `circa`.
+- **Ranges that stack** — multi-day (or longer) spans draw as labeled bars with translucent bands behind the events they cover; overlapping ranges darken where they stack.
 - **Zero runtime deps in the embed** — vanilla TypeScript [custom element](https://developer.mozilla.org/en-US/docs/Web/API/Web_components); ≤ 25 kB minified. An optional Zod schema ships on a separate subpath.
 - **Responsive by container** — horizontal lanes when wide; a vertical rail under 800px of _container_ width (not viewport). Or pin either mode.
-- **Accessible** — arrow / Home / End across events, Enter opens details, Esc closes; ARIA throughout; `prefers-reduced-motion` respected.
+- **Accessible** — arrow / Home / End across events, Enter or Space opens details, Esc closes and returns focus; ARIA throughout; `prefers-reduced-motion` respected.
 
 ---
 
@@ -31,12 +32,23 @@ npm install timarro
 # or: pnpm add timarro · yarn add timarro · bun add timarro
 ```
 
+### Package surface
+
+| Entry              | Use for                                                                 |
+| ------------------ | ----------------------------------------------------------------------- |
+| `timarro`          | `define()`, `TimarroTimeline`, `validateTimelineData`, TypeScript types |
+| `timarro/register` | side-effect registration of `<timarro-timeline>`                        |
+| `timarro/schema`   | canonical Zod schemas + shared enum literals (pulls in `zod`)           |
+
+The element bundle stays dependency-free. Import `timarro/schema` only from tooling, servers, or the platform — never from code that must ship in the CDN embed.
+
 ### Bundler
 
 ```ts
 import { define } from 'timarro';
 
 define(); // registers <timarro-timeline>
+// define('my-timeline'); // optional custom tag name
 ```
 
 ```html
@@ -78,7 +90,7 @@ Setting `data` aborts any in-flight `src` fetch — the property wins.
 
 ### Next.js
 
-Custom elements don’t SSR. Define client-side:
+Custom elements don’t SSR. Define client-side; the validator and types remain importable from Node:
 
 ```tsx
 'use client';
@@ -92,6 +104,11 @@ export default function Timeline() {
 
   return <timarro-timeline src="/fixtures/apollo.json" />;
 }
+```
+
+```ts
+// Server-safe — no DOM required
+import { validateTimelineData } from 'timarro';
 ```
 
 ---
@@ -129,23 +146,27 @@ el.addEventListener('timarro:select', (e) => {
 });
 ```
 
+### Keyboard
+
+With focus on a marker: **← / →** (or **↑ / ↓** in vertical mode) move chronologically, **Home / End** jump to first / last, **Enter / Space** toggle the detail card, **Esc** closes it and returns focus to the marker.
+
 ### Theming
 
-CSS custom properties on the host:
+CSS custom properties on the host (defaults match the Timarro brand — vermilion accent, warm ink/paper neutrals):
 
-| Token                    | Role                        |
-| ------------------------ | --------------------------- |
-| `--timarro-accent`       | markers, ranges, brand link |
-| `--timarro-bg`           | host background             |
-| `--timarro-fg`           | primary text                |
-| `--timarro-muted`        | secondary text              |
-| `--timarro-border`       | rules and dividers          |
-| `--timarro-font`         | UI / body                   |
-| `--timarro-display-font` | title                       |
-| `--timarro-mono-font`    | dates and tick labels       |
-| `--timarro-error`        | validation / load errors    |
-| `--timarro-card-bg`      | event detail card           |
-| `--timarro-card-fg`      | event detail card text      |
+| Token                    | Role                        | Default fallback        |
+| ------------------------ | --------------------------- | ----------------------- |
+| `--timarro-accent`       | markers, ranges, brand link | `#d6451b`               |
+| `--timarro-bg`           | host background             | transparent             |
+| `--timarro-fg`           | primary text                | `#1a1714`               |
+| `--timarro-muted`        | secondary text              | `#6b6459`               |
+| `--timarro-border`       | rules and dividers          | `#e7e2d9`               |
+| `--timarro-font`         | UI / body                   | system sans             |
+| `--timarro-display-font` | title                       | Georgia / serif         |
+| `--timarro-mono-font`    | dates and tick labels       | system mono             |
+| `--timarro-error`        | validation / load errors    | `#b3261e`               |
+| `--timarro-card-bg`      | event detail card           | `#fff`                  |
+| `--timarro-card-fg`      | event detail card text      | inherits `--timarro-fg` |
 
 Shadow parts for deeper styling:
 `::part(header | viewport | event | axis | card | legend | brand)`.
@@ -159,7 +180,7 @@ timarro-timeline {
 }
 ```
 
-Per-event accents: set `color` on an event (any CSS color). It overrides `--timarro-accent` for that event’s marker, range, and uncertainty band.
+**Per-event accents:** set `color` on an event (any CSS color — `#d6451b`, `rebeccapurple`, `rgb(…)`, …). It overrides `--timarro-accent` for that event’s marker, range bar, and uncertainty / overlap band. Invalid or unsafe values are ignored at render time.
 
 ---
 
@@ -179,7 +200,8 @@ Shape: `{ timeline, events }`. Full types live in `timarro`; the canonical Zod s
       "id": "ev-apollo-11-launch",
       "title": "Apollo 11 launches from Kennedy Space Center",
       "date": { "start": "1969-07-16T13:32:00Z", "precision": "datetime" },
-      "entities": ["Neil Armstrong", "Buzz Aldrin", "Michael Collins"]
+      "entities": ["Neil Armstrong", "Buzz Aldrin", "Michael Collins"],
+      "color": "#1a5fb4"
     },
     {
       "id": "ev-apollo-8",
@@ -190,34 +212,43 @@ Shape: `{ timeline, events }`. Full types live in `timarro`; the canonical Zod s
 }
 ```
 
+`timeline.description` appears under the title. Each event’s formatted date sits under its label on the canvas. Opening a marker shows a detail card with description, entities, http(s) media, and `sourceRef` when present.
+
 ### Fuzzy dates
 
-| `date.start` / `date.end`              | `date.precision` | Rendered as                |
-| -------------------------------------- | ---------------- | -------------------------- |
-| `"1943"`                               | `year`           | year-wide uncertainty band |
-| `"1943-05"`                            | `month`          | month-wide band            |
-| `"1943-05-12"`                         | `day`            | exact marker               |
-| `"1943-05-12T14:30[:00][Z or ±HH:MM]"` | `datetime`       | exact marker               |
+| `date.start` / `date.end`              | `date.precision` | Marker                   |
+| -------------------------------------- | ---------------- | ------------------------ |
+| `"1943"`                               | `year`           | diamond + year-wide band |
+| `"1943-05"`                            | `month`          | ring + month-wide band   |
+| `"1943-05-12"`                         | `day`            | solid dot                |
+| `"1943-05-12T14:30[:00][Z or ±HH:MM]"` | `datetime`       | solid dot                |
 
 Rules:
 
 - `precision` must match the granularity of `start` (validation error otherwise).
-- `end` is optional and may use a different granularity than `start`.
+- `end` is optional and may use a different granularity than `start`. With `end`, the event renders as a **range** (labeled bar + overlap band) instead of a point marker.
 - Date-only values are UTC calendar dates; naive datetimes are treated as UTC.
-- `"circa": true` marks an approximate date (`~1943`) without widening its interval.
-- Every value resolves to a half-open interval `[earliest, latest)` — markers sit at the midpoint; uncertainty bands span the interval.
+- `"circa": true` marks an approximate date (`~1943`) without widening its interval — dashed band edges, `~` prefix on the label.
+- Every value resolves to a half-open interval `[earliest, latest)` — point markers sit at the midpoint; uncertainty bands span the interval; range bars include endpoint fades when an endpoint is fuzzy.
 - BCE dates are rejected in v1.
 
 Optional event fields: `description`, `entities`, `mediaUrls` (http/https only), `sourceRef`, `color`, `order`.
+
+Optional timeline fields (ignored by the renderer when unused): `coverImageUrl`, `createdBy`, `visibility`, `sourceTypes`. Unknown extra fields are ignored by validation.
 
 ### Validation
 
 The element validates on `data` set and surfaces issues in the UI. For programmatic checks:
 
 ```ts
-import { validateTimelineData } from 'timarro'; // dependency-free; ships in the embed
-import { timarroTimelineDataSchema } from 'timarro/schema'; // canonical Zod schema
+import { validateTimelineData, explainDateProblem } from 'timarro';
+// dependency-free; ships in the embed
+
+import { timarroTimelineDataSchema, PRECISIONS, SOURCE_TYPES, VISIBILITIES } from 'timarro/schema';
+// canonical Zod schema + shared enum literals
 ```
+
+`validateTimelineData` collects **all** issues (no fail-fast). `explainDateProblem` is the shared date-semantics check used by both the embed validator and the Zod schema.
 
 ---
 
@@ -225,13 +256,15 @@ import { timarroTimelineDataSchema } from 'timarro/schema'; // canonical Zod sch
 
 ```bash
 pnpm install
-pnpm demo     # vite dev server with the demo page
-pnpm test     # vitest
-pnpm build    # tsdown → dist/ (ESM + CJS + types + CDN bundle)
-pnpm size     # assert ≤ 25 kB CDN bundle
+pnpm demo           # vite dev server with the demo page
+pnpm test           # vitest
+pnpm test:coverage  # vitest + coverage gate
+pnpm build          # tsdown → dist/ (ESM + CJS + types + CDN bundle)
+pnpm size           # assert ≤ 25 kB CDN bundle
+pnpm check:package  # publint + arethetypeswrong
 ```
 
-Requires Node ≥ 24.
+Requires Node ≥ 24 and pnpm 10 (see `packageManager` in `package.json`).
 
 ---
 
