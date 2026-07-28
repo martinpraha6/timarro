@@ -84,7 +84,9 @@ export function validateTimelineData(input: unknown): ValidationResult {
   if (!Array.isArray(events)) {
     push('events', 'expected an array');
   } else {
-    events.forEach((event, i) => validateEvent(event, `events[${i}]`, push));
+    events.forEach((event, i) => {
+      validateEvent(event, `events[${i}]`, push);
+    });
   }
 
   if (issues.length > 0) return { ok: false, issues };

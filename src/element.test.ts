@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import apollo from '../demo/data/apollo.json';
 import { TimarroTimeline, define } from './index';
 import type { TimarroTimelineData } from './schema/types';
@@ -14,7 +14,9 @@ describe('define()', () => {
   it('registers the custom element and is idempotent', () => {
     define();
     expect(customElements.get('timarro-timeline')).toBe(TimarroTimeline);
-    expect(() => define()).not.toThrow();
+    expect(() => {
+      define();
+    }).not.toThrow();
   });
 });
 
@@ -399,6 +401,136 @@ describe('popover a11y state', () => {
     marker.click();
     expect(marker.getAttribute('aria-expanded')).toBe('false');
     expect(el.shadowRoot!.querySelector('[role="dialog"]')).toBeNull();
+    el.remove();
+  });
+
+  it('closes on Escape and on an outside document click', () => {
+    const el = mount();
+    el.data = apollo as TimarroTimelineData;
+    const marker = el.shadowRoot!.querySelector<HTMLButtonElement>('.marker')!;
+    marker.focus();
+    marker.click();
+    expect(el.shadowRoot!.querySelector('[role="dialog"]')).not.toBeNull();
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(el.shadowRoot!.querySelector('[role="dialog"]')).toBeNull();
+    expect(el.shadowRoot!.activeElement).toBe(marker);
+
+    marker.click();
+    document.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(el.shadowRoot!.querySelector('[role="dialog"]')).toBeNull();
+    el.remove();
+  });
+
+  it('summarizes overflow issues when more than three validation errors exist', () => {
+    const el = mount();
+    el.data = {
+      timeline: { id: '', title: '' },
+      events: [
+        { id: '', title: '', date: { start: 'x', precision: 'day' } },
+        { id: '', title: '', date: { start: 'y', precision: 'day' } },
+      ],
+    } as unknown as TimarroTimelineData;
+    const text = el.shadowRoot?.textContent ?? '';
+    expect(text).toContain('invalid data');
+    expect(text).toMatch(/and \d+ more/);
+    el.remove();
+  });
+});
+
+describe('src attribute loading', () => {
+  it('loads JSON from src and surfaces fetch failures', async () => {
+    const ok = mount();
+    const payload = {
+      timeline: { id: 'tl-src', title: 'From src' },
+      events: [{ id: 'e', title: 'E', date: { start: '1969', precision: 'year' } }],
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(payload),
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 503,
+      });
+    vi.stubGlobal('fetch', fetchMock);
+
+    ok.setAttribute('src', '/data/ok.json');
+    await vi.waitFor(() => {
+      expect(ok.shadowRoot?.querySelector('.header')?.textContent).toBe('From src');
+    });
+
+    const failing = mount();
+    let errorMessage: string | undefined;
+    failing.addEventListener('timarro:error', (event) => {
+      errorMessage = (event as CustomEvent<{ message: string }>).detail.message;
+    });
+    failing.setAttribute('src', '/data/missing.json');
+    await vi.waitFor(() => {
+      expect(failing.shadowRoot?.textContent).toContain('failed to load data');
+    });
+    expect(errorMessage).toContain('HTTP 503');
+
+    ok.remove();
+    failing.remove();
+    vi.unstubAllGlobals();
+  });
+});
+
+describe('empty timeline and rich popover content', () => {
+  it('renders a no-events status when the timeline has zero events', () => {
+    const el = mount();
+    el.data = { timeline: { id: 't', title: 'Empty', description: 'None yet' }, events: [] };
+    expect(el.shadowRoot?.querySelector('.description')?.textContent).toBe('None yet');
+    expect(el.shadowRoot?.textContent).toContain('timeline has no events');
+    el.remove();
+  });
+
+  it('renders entities, extra media links, and sourceRef in the popover', () => {
+    const el = mount();
+    el.data = {
+      timeline: { id: 't', title: 'Rich' },
+      events: [
+        {
+          id: 'e',
+          title: 'Rich event',
+          description: 'Details',
+          date: { start: '1969-07-21', precision: 'day' },
+          entities: ['Neil Armstrong'],
+          mediaUrls: ['https://example.com/a.png', 'https://example.com/b.png'],
+          sourceRef: 'NASA archive',
+        },
+      ],
+    };
+    el.shadowRoot!.querySelector<HTMLButtonElement>('.marker')!.click();
+    const popover = el.shadowRoot!.querySelector('[part="card"]');
+    expect(popover?.textContent).toContain('Neil Armstrong');
+    expect(popover?.textContent).toContain('Media: https://example.com/b.png');
+    expect(popover?.textContent).toContain('Source: NASA archive');
+    expect(popover?.querySelectorAll('img')).toHaveLength(1);
+    el.remove();
+  });
+
+  it('applies per-event color in vertical layout and opens on marker click', () => {
+    const el = mount();
+    el.setAttribute('orientation', 'vertical');
+    el.data = {
+      timeline: { id: 't', title: 'Vertical color' },
+      events: [
+        {
+          id: 'e',
+          title: 'Colored',
+          date: { start: '1969', precision: 'year' },
+          color: '#0d9488',
+        },
+      ],
+    };
+    const event = el.shadowRoot!.querySelector<HTMLElement>('[data-event-id="e"]')!;
+    expect(event.style.getPropertyValue('--ev-color')).toBe('#0d9488');
+    event.querySelector<HTMLButtonElement>('.marker')!.click();
+    expect(el.shadowRoot!.querySelector('[role="dialog"]')).not.toBeNull();
     el.remove();
   });
 });
