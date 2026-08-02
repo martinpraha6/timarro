@@ -189,13 +189,24 @@ const CSS = /* css */ `
     position: absolute;
     z-index: 0; /* stacking context so the band's z-index: -1 stays inside the item */
     display: flex;
-    align-items: center;
-    gap: 8px;
-    height: 42px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
   }
-  /* Range bars sit in a shorter row so stacked ranges keep a visible gap. */
+  /*
+   * Point events: short title + date stacked above the marker (classic pin).
+   * Full title is revealed via the native title tooltip on hover.
+   */
+  .event--point {
+    height: 48px;
+  }
+  /*
+   * Ranges: title + date ABOVE the bar — never straddling or below the stripe.
+   * Label width is set inline from the bar span (with a short-bar overhang).
+   */
   .event--range {
-    height: 38px;
+    height: 56px;
+    gap: 3px;
   }
   .marker {
     appearance: none;
@@ -219,6 +230,8 @@ const CSS = /* css */ `
     width: 12px;
     height: 12px;
     border-radius: 50%;
+    /* Keep the pin visually under the start of the label. */
+    margin-left: 0;
   }
   .marker--month {
     /* Keep the precision ring, but mask the rail/axis behind its center. */
@@ -248,8 +261,10 @@ const CSS = /* css */ `
   .band {
     position: absolute;
     z-index: -1;
-    top: 50%;
-    transform: translateY(-50%);
+    /* Align with the marker near the bottom of the stacked point row. */
+    bottom: 3px;
+    top: auto;
+    transform: none;
     height: 8px;
     border-radius: 4px;
     background: color-mix(in srgb, var(--_accent) 18%, transparent);
@@ -266,7 +281,7 @@ const CSS = /* css */ `
     display: flex;
     min-width: 0;
     flex-direction: column;
-    gap: 2px;
+    gap: 1px;
   }
   .label {
     color: var(--_fg);
@@ -274,9 +289,52 @@ const CSS = /* css */ `
     font-weight: 560;
     line-height: 1.25;
     white-space: nowrap;
-    max-width: 180px;
+    max-width: 200px;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  .event--point .label {
+    /* Shortened in JS (~12 letters); keep a tight cap for packing/layout. */
+    max-width: 7.5rem;
+  }
+  /* Clickable short title — expands to full text on click, collapses on next click. */
+  .label--toggle {
+    appearance: none;
+    display: block;
+    margin: 0;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-weight: 560;
+    line-height: 1.25;
+    text-align: left;
+    cursor: pointer;
+  }
+  .label--toggle:hover,
+  .label--toggle:focus-visible {
+    color: var(--_accent);
+  }
+  .label--toggle:focus-visible {
+    outline: 2px solid var(--_accent);
+    outline-offset: 2px;
+  }
+  .label--expanded {
+    max-width: none;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+    position: relative;
+    padding: 1px 4px;
+    margin: -1px -4px;
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--timarro-card-bg, #fff) 92%, transparent);
+    box-shadow: 0 1px 4px color-mix(in srgb, var(--_fg) 10%, transparent);
+  }
+  /* Base lift for expanded items; JS raises z-index further on each expand. */
+  .event--point:has(.label--expanded) {
+    z-index: 3;
   }
   .event-date {
     overflow: hidden;
@@ -287,6 +345,13 @@ const CSS = /* css */ `
     line-height: 1.3;
     text-overflow: ellipsis;
     white-space: nowrap;
+    max-width: 200px;
+  }
+  .event--point .event-date {
+    max-width: 7.5rem;
+  }
+  .event--range .event-date {
+    max-width: none;
   }
 
   .axis {
@@ -390,7 +455,7 @@ const CSS = /* css */ `
     margin: 0 0 4px;
     font-size: 11px;
     color: var(--_muted);
-    word-break: break-all;
+    overflow-wrap: break-word;
   }
   .popover-close {
     position: absolute;

@@ -5,6 +5,7 @@ import { renderAxis } from './axis';
 import {
   AXIS_HEIGHT,
   CANVAS_TOP_PAD,
+  estimateLabelWidth,
   LANE_HEIGHT,
   RANGE_LANE_HEIGHT,
   RANGE_ROW_HEIGHT,
@@ -22,7 +23,6 @@ export interface RenderContext {
   onSelect: (ev: ResolvedEvent, anchor: HTMLElement) => void;
 }
 
-const MAX_LABEL_PX = 180;
 const MIN_RANGE_BAR_PX = 12;
 
 /** Year/month precision spans a visible uncertainty interval; day/datetime doesn't. */
@@ -51,8 +51,6 @@ export function renderTimeline(
   const positioned = normalized.events.map((ev): PositionedEvent => {
     const kind = ev.end ? 'range' : 'point';
     const color = safeCssColor(ev.src.color) ?? undefined;
-    // Estimated label width (capped; CSS ellipsizes) — avoids a measure/reflow pass.
-    const labelWidth = Math.min(MAX_LABEL_PX, 24 + ev.src.title.length * 6.5);
 
     if (kind === 'range' && ev.end) {
       // Bar spans the full uncertainty envelope; fuzzy endpoints fade out via a
@@ -68,7 +66,8 @@ export function renderTimeline(
         ev.endParts && isFuzzyPrecision(ev.endParts.precision)
           ? Math.min(barEnd - scale.toPx(ev.end.earliest), half)
           : 0;
-      const contentWidth = barWidth + 6 + labelWidth;
+      // Label sits above the bar; packing uses the wider of bar vs label overhang.
+      const labelWidth = estimateLabelWidth(ev.src.title, barWidth);
       return {
         ev,
         kind,
@@ -78,18 +77,20 @@ export function renderTimeline(
         top: 0,
         fadeLeft,
         fadeRight,
-        extent: [barStart, barStart + contentWidth],
+        extent: [barStart, barStart + Math.max(barWidth, labelWidth)],
         lane: 0,
         color,
       };
     }
 
     const x = scale.toPx(ev.start.mid);
+    // Point labels sit above the marker, left-aligned with the marker centre.
     const left = x - 6;
+    const labelWidth = estimateLabelWidth(ev.src.title);
     const band: [number, number] | undefined = isFuzzyPrecision(ev.startParts.precision)
       ? [scale.toPx(ev.start.earliest), scale.toPx(ev.start.latest)]
       : undefined;
-    const contentWidth = 12 + 6 + labelWidth;
+    const contentWidth = Math.max(12, labelWidth);
     // The uncertainty band counts toward the packing extent so same-lane
     // neighbours don't sit on top of it.
     const extent: [number, number] = [
@@ -112,10 +113,9 @@ export function renderTimeline(
     p.top = CANVAS_TOP_PAD + p.lane * LANE_HEIGHT;
   });
 
-  // Ranges stack by temporal overlap (bar span, not label), so overlapping
-  // ranges land on separate lanes — and thus get different band heights.
+  // Ranges stack by label+bar extent so overhanging titles on short bars don't collide.
   const rangeLanes = assignLanes(
-    rangeIdx.map((i) => [positioned[i]!.x, positioned[i]!.x + positioned[i]!.barWidth] as const),
+    rangeIdx.map((i) => positioned[i]!.extent),
     2,
   );
   const pointsHeight = pointLanes.laneCount * LANE_HEIGHT;

@@ -49,7 +49,7 @@ export function renderVerticalTimeline(
     const body = document.createElement('div');
     body.className = 'vbody';
     const label = document.createElement('span');
-    label.className = 'label label--wrap';
+    label.className = 'label';
     label.textContent = ev.src.title;
     const date = document.createElement('span');
     date.className = 'vdate';

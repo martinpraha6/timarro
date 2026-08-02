@@ -1,6 +1,7 @@
 import type { ResolvedEvent } from '../model/normalize';
 import { formatEventAria, formatEventDate } from './format';
 
+/** Point events: short label sits above the marker. */
 export const LANE_HEIGHT = 52;
 export const AXIS_HEIGHT = 42;
 export const CANVAS_TOP_PAD = 14;
@@ -8,12 +9,24 @@ export const POPOVER_WIDTH = 320;
 
 /** Range layout: labeled bars live in their own region below the point events. */
 export const RANGE_BAR_HEIGHT = 10;
-/** Height of a single range's bar row (bar vertically centred within). */
-export const RANGE_ROW_HEIGHT = 38;
+/**
+ * Height of a single range row: title + date above the bar (never straddling it).
+ * ~16 title + 2 gap + 12 date + 4 gap + 10 bar ≈ 44, plus breathing room.
+ */
+export const RANGE_ROW_HEIGHT = 56;
 /** Vertical stride between stacked range lanes (row + gap). */
-export const RANGE_LANE_HEIGHT = 44;
+export const RANGE_LANE_HEIGHT = 64;
 /** Gap between the point-events region and the ranges region below it. */
 export const RANGES_TOP_GAP = 14;
+/** Soft cap for estimated / clamped range label width. */
+export const MAX_LABEL_PX = 200;
+/** Short range bars still get a readable label overhang to the right. */
+export const MIN_RANGE_LABEL_PX = 120;
+/**
+ * Point-event on-canvas titles are shortened to this many letters; the full
+ * title is exposed via the native `title` tooltip on hover.
+ */
+export const POINT_LABEL_CHARS = 12;
 
 /** CSS custom property carrying a per-event accent (see {@link safeCssColor}). */
 const EV_COLOR_VAR = '--ev-color';
@@ -83,6 +96,30 @@ export function markerShapeClass(precision: string): string {
   return '';
 }
 
+/**
+ * Shorten a point-event title for the canvas (~10–15 letters). Returns the
+ * original when it already fits; otherwise truncates and appends an ellipsis.
+ */
+export function shortenPointTitle(title: string, maxChars = POINT_LABEL_CHARS): string {
+  const trimmed = title.trim();
+  if (trimmed.length <= maxChars) return trimmed;
+  // Leave room for the ellipsis character.
+  const keep = Math.max(1, maxChars - 1);
+  return `${trimmed.slice(0, keep).trimEnd()}…`;
+}
+
+/** Estimated label width for packing — mirrors CSS clamp without a measure pass. */
+export function estimateLabelWidth(title: string, barWidth = 0): number {
+  if (barWidth > 0) {
+    const chars = Math.min(MAX_LABEL_PX, 24 + title.length * 6.5);
+    // Ranges: prefer the bar span; short bars still get a readable overhang.
+    return Math.max(barWidth, Math.min(MAX_LABEL_PX, Math.max(chars, MIN_RANGE_LABEL_PX)));
+  }
+  // Points: packing uses the shortened on-canvas label.
+  const short = shortenPointTitle(title);
+  return Math.min(MAX_LABEL_PX, 24 + short.length * 6.5);
+}
+
 /** All data strings go through textContent — never innerHTML. */
 export function renderEvent(
   positioned: PositionedEvent,
@@ -90,7 +127,7 @@ export function renderEvent(
   onSelect: (ev: ResolvedEvent, anchor: HTMLElement) => void,
 ): HTMLElement {
   const item = document.createElement('div');
-  item.className = positioned.kind === 'range' ? 'event event--range' : 'event';
+  item.className = positioned.kind === 'range' ? 'event event--range' : 'event event--point';
   item.setAttribute('role', 'listitem');
   item.setAttribute('part', 'event');
   item.dataset['eventId'] = positioned.ev.src.id;
@@ -132,21 +169,79 @@ export function renderEvent(
   const copy = document.createElement('span');
   copy.className = 'event-copy';
 
-  const label = document.createElement('span');
-  label.className = 'label';
-  // "~" is the at-a-glance circa affordance.
-  label.textContent =
-    positioned.ev.src.date.circa === true
-      ? `~ ${positioned.ev.src.title}`
-      : positioned.ev.src.title;
+  const fullTitle = positioned.ev.src.title;
+  const isCirca = positioned.ev.src.date.circa === true;
+  if (positioned.kind === 'range') {
+    const label = document.createElement('span');
+    label.className = 'label';
+    // Ranges: single-line ellipsis sized to the bar; full title stays visible in popover.
+    label.style.maxWidth = `${estimateLabelWidth(fullTitle, positioned.barWidth)}px`;
+    label.textContent = isCirca ? `~ ${fullTitle}` : fullTitle;
+    copy.append(label);
+  } else {
+    copy.append(renderPointLabel(fullTitle, isCirca));
+  }
 
   const date = document.createElement('span');
   date.className = 'event-date';
   date.textContent = formatEventDate(positioned.ev, locale);
 
-  copy.append(label, date);
-  item.append(marker, copy);
+  copy.append(date);
+  // Copy above the accent (bar or marker) so text never sits through/below the stripe.
+  item.append(copy, marker);
   return item;
+}
+
+/**
+ * Point-event title: shortened on the canvas; click toggles the full title
+ * (click again collapses). Titles that already fit stay as plain text.
+ * The most recently expanded title is stacked on top of other expanded labels.
+ */
+let pointLabelStack = 1;
+
+function renderPointLabel(fullTitle: string, isCirca: boolean): HTMLElement {
+  const short = shortenPointTitle(fullTitle);
+  const displayShort = isCirca ? `~ ${short}` : short;
+  const displayFull = isCirca ? `~ ${fullTitle}` : fullTitle;
+
+  if (short === fullTitle) {
+    const label = document.createElement('span');
+    label.className = 'label';
+    label.textContent = displayFull;
+    return label;
+  }
+
+  const label = document.createElement('button');
+  label.type = 'button';
+  label.className = 'label label--toggle';
+  label.textContent = displayShort;
+  label.title = fullTitle;
+  label.setAttribute('aria-expanded', 'false');
+  label.setAttribute('aria-label', `Show full title: ${fullTitle}`);
+
+  let expanded = false;
+  label.addEventListener('click', (event) => {
+    // Don't bubble to any parent handlers; marker still owns the popover.
+    event.stopPropagation();
+    expanded = !expanded;
+    label.textContent = expanded ? displayFull : displayShort;
+    label.classList.toggle('label--expanded', expanded);
+    label.setAttribute('aria-expanded', String(expanded));
+    const item = label.closest<HTMLElement>('.event');
+    if (expanded) {
+      label.removeAttribute('title');
+      label.setAttribute('aria-label', `Collapse title: ${fullTitle}`);
+      // Bump above every previously expanded title in this timeline.
+      pointLabelStack += 1;
+      if (item) item.style.zIndex = String(pointLabelStack);
+    } else {
+      label.title = fullTitle;
+      label.setAttribute('aria-label', `Show full title: ${fullTitle}`);
+      if (item) item.style.zIndex = '';
+    }
+  });
+
+  return label;
 }
 
 /**

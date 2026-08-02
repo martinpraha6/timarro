@@ -41,11 +41,15 @@ describe('<timarro-timeline>', () => {
   it('orders events chronologically in the DOM', () => {
     const el = mount();
     el.data = apollo as TimarroTimelineData;
-    const labels = [...el.shadowRoot!.querySelectorAll('[part="event"] .label')].map(
-      (node) => node.textContent,
-    );
-    expect(labels[0]).toBe("Kennedy's Moon speech to Congress");
-    expect(labels.at(-1)).toBe('Apollo 17 — last Moon landing');
+    const labels = [
+      ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="event"] .label'),
+    ];
+    // Point labels are shortened on-canvas; full title expands on label click.
+    expect(labels[0]?.textContent).toBe("Kennedy's M…");
+    expect(labels[0]?.title).toBe("Kennedy's Moon speech to Congress");
+    expect(labels[0]?.tagName).toBe('BUTTON');
+    // Apollo 17 is a range — full title stays on the bar label.
+    expect(labels.at(-1)?.textContent).toBe('Apollo 17 — last Moon landing');
     el.remove();
   });
 
@@ -84,7 +88,11 @@ describe('<timarro-timeline>', () => {
       events: [{ id: 'e', title: hostile, date: { start: '1969-07-21', precision: 'day' } }],
     };
     expect(el.shadowRoot!.querySelector('img')).toBeNull();
-    expect(el.shadowRoot!.textContent).toContain(hostile);
+    // On-canvas label is shortened; full hostile string must still appear as text (tooltip / aria).
+    const label = el.shadowRoot!.querySelector<HTMLElement>('.label');
+    expect(label?.textContent).toContain('<img src=x');
+    expect(label?.title).toBe(hostile);
+    expect(el.shadowRoot!.querySelector('.marker')?.getAttribute('aria-label')).toContain(hostile);
     el.remove();
   });
 
