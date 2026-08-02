@@ -8,7 +8,7 @@ Framework-agnostic web component for historical timelines: **`<timarro-timeline>
 
 Drop in JSON. Get a keyboard-accessible, precision-aware timeline that works in any stack — plain HTML, Next.js, Vue, a CMS embed.
 
-![Timeline with precision-distinct markers: dots for exact dates, rings for months, diamonds for years, uncertainty bands, and a legend](./docs/screenshot.png)
+![Timeline with labels stacked above markers: shortened point titles, precision-distinct shapes (dots, rings, diamonds), range bars, uncertainty bands, and a legend](./docs/screenshot.png)
 
 The open rendering layer of [timarro.com](https://timarro.com) — create, share, and embed visual timelines. Rendered timelines carry a small “Powered by Timarro” attribution.
 
@@ -18,6 +18,7 @@ The open rendering layer of [timarro.com](https://timarro.com) — create, share
 
 - **Data in, timeline out** — consumes a JSON document of events. Where the data comes from is not the engine’s business.
 - **Fuzzy dates are first-class** — year, month, day, and datetime precision render as distinct markers (diamonds, rings, dots), with uncertainty bands, gradient-faded range endpoints, and optional `circa`.
+- **Labels that stay readable** — point events stack a short title and date above the marker; click the title to expand the full text. Ranges keep full titles on the bar.
 - **Ranges that stack** — multi-day (or longer) spans draw as labeled bars with translucent bands behind the events they cover; overlapping ranges darken where they stack.
 - **Zero runtime deps in the embed** — vanilla TypeScript [custom element](https://developer.mozilla.org/en-US/docs/Web/API/Web_components); ≤ 25 kB minified. An optional Zod schema ships on a separate subpath.
 - **Responsive by container** — horizontal lanes when wide; a vertical rail under 800px of _container_ width (not viewport). Or pin either mode.
@@ -212,7 +213,7 @@ Shape: `{ timeline, events }`. Full types live in `timarro`; the canonical Zod s
 }
 ```
 
-`timeline.description` appears under the title. Each event’s formatted date sits under its label on the canvas. Opening a marker shows a detail card with description, entities, http(s) media, and `sourceRef` when present.
+`timeline.description` appears under the title. On the canvas, each point event shows a shortened title with the formatted date beneath it (click the title to expand); range events keep the full title on the bar. Opening a marker shows a detail card with description, entities, http(s) media, and `sourceRef` when present.
 
 ### Fuzzy dates
 
