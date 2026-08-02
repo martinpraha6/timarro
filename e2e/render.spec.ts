@@ -8,7 +8,10 @@ test('renders the Apollo fixture: header, 7 ordered events, axis, brand', async 
   const apollo = page.locator('#apollo');
   await expect(apollo.locator('[part="header"]')).toHaveText('Apollo program');
   await expect(apollo.locator('[part="event"]')).toHaveCount(7);
-  await expect(apollo.locator('[part="event"]').first()).toContainText("Kennedy's Moon speech");
+  // Point labels are shortened on-canvas; full title lives in the tooltip.
+  const firstLabel = apollo.locator('[part="event"]').first().locator('.label');
+  await expect(firstLabel).toHaveText("Kennedy's M…");
+  await expect(firstLabel).toHaveAttribute('title', "Kennedy's Moon speech to Congress");
   await expect(apollo.locator('[part="event"]').last()).toContainText('Apollo 17');
   await expect(apollo.locator('[part="axis"] .tick-label').first()).toBeVisible();
   await expect(apollo.locator('[part="brand"]')).toHaveText('Powered by Timarro');
@@ -87,7 +90,10 @@ test('hostile titles render as inert text', async ({ page }) => {
     };
   });
   const hostile = page.locator('#hostile');
+  const label = hostile.locator('[part="event"] .label');
   await expect(hostile.locator('[part="event"]')).toHaveCount(1);
   await expect(hostile.locator('img')).toHaveCount(0);
-  await expect(hostile).toContainText('<img src=x onerror=alert(1)>');
+  // On-canvas label is shortened; full hostile string must still appear as text (tooltip).
+  await expect(label).toContainText('<img src=x');
+  await expect(label).toHaveAttribute('title', '<img src=x onerror=alert(1)>');
 });
