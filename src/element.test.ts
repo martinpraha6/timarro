@@ -41,9 +41,7 @@ describe('<timarro-timeline>', () => {
   it('orders events chronologically in the DOM', () => {
     const el = mount();
     el.data = apollo as TimarroTimelineData;
-    const labels = [
-      ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="event"] .label'),
-    ];
+    const labels = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="event"] .label')];
     // Point labels are shortened on-canvas; full title expands on label click.
     expect(labels[0]?.textContent).toBe("Kennedy's M…");
     expect(labels[0]?.title).toBe("Kennedy's Moon speech to Congress");
