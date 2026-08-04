@@ -170,7 +170,7 @@ CSS custom properties on the host (defaults match the Timarro brand — vermilio
 | `--timarro-card-fg`      | event detail card text      | inherits `--timarro-fg` |
 
 Shadow parts for deeper styling:
-`::part(header | viewport | event | axis | card | legend | brand)`.
+`::part(header | cover | viewport | event | axis | card | legend | brand)`.
 
 ```css
 timarro-timeline {
@@ -213,7 +213,7 @@ Shape: `{ timeline, events }`. Full types live in `timarro`; the canonical Zod s
 }
 ```
 
-`timeline.description` appears under the title. On the canvas, each point event shows a shortened title with the formatted date beneath it (click the title to expand); range events keep the full title on the bar. Opening a marker shows a detail card with description, entities, http(s) media, and `sourceRef` when present.
+`timeline.coverImageUrl` floats to the right of the heading, with `timeline.description` running up its left side and continuing below it. The cover keeps its own aspect ratio (never cropped) at up to 30% of the width, and is dropped unless the URL is http(s). On the canvas, each point event shows a shortened title with the formatted date beneath it (click the title to expand); range events keep the full title on the bar. Opening a marker shows a detail card with description, entities, http(s) media, and `sourceRef` when present.
 
 ### Fuzzy dates
 
@@ -235,7 +235,7 @@ Rules:
 
 Optional event fields: `description`, `entities`, `mediaUrls` (http/https only), `sourceRef`, `color`, `order`.
 
-Optional timeline fields (ignored by the renderer when unused): `coverImageUrl`, `createdBy`, `visibility`, `sourceTypes`. Unknown extra fields are ignored by validation.
+Optional timeline fields: `coverImageUrl` (rendered — http/https only), plus `createdBy`, `visibility` and `sourceTypes`, which the renderer ignores. Unknown extra fields are ignored by validation.
 
 ### Validation
 

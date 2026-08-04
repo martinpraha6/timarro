@@ -1,5 +1,6 @@
 import type { ResolvedEvent } from '../model/normalize';
 import { formatEventAria, formatEventDate } from './format';
+import { safeHttpUrl } from './url';
 
 /** Point events: short label sits above the marker. */
 export const LANE_HEIGHT = 52;
@@ -339,14 +340,4 @@ export function renderPopover(
   }
 
   return popover;
-}
-
-/** Accept http(s) URLs only — anything else (javascript:, data:, junk) is dropped. */
-function safeHttpUrl(url: string): string | null {
-  try {
-    const parsed = new URL(url, document.baseURI);
-    return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? parsed.href : null;
-  } catch {
-    return null;
-  }
 }

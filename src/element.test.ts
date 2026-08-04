@@ -494,6 +494,44 @@ describe('empty timeline and rich popover content', () => {
     el.remove();
   });
 
+  it('renders the cover ahead of the title so the copy floats around it', () => {
+    const el = mount();
+    el.data = {
+      timeline: {
+        id: 't',
+        title: 'Charles IV',
+        description: 'Eleventh Czech king',
+        coverImageUrl: 'https://example.com/charles.jpg',
+      },
+      events: [],
+    };
+    const heading = el.shadowRoot!.querySelector('.heading')!;
+    // Order is the point of the test. The cover is floated, and a float only
+    // displaces what follows it — put it after the title and the title stops
+    // sitting beside it. An embed and the platform page it came from must also
+    // agree on the slot.
+    expect([...heading.children].map((node) => node.className)).toEqual([
+      'cover',
+      'header',
+      'description',
+    ]);
+    const cover = heading.querySelector<HTMLImageElement>('[part="cover"]')!;
+    expect(cover.src).toBe('https://example.com/charles.jpg');
+    expect(cover.alt).toBe('');
+    el.remove();
+  });
+
+  it('drops a cover whose URL is not http(s)', () => {
+    const el = mount();
+    // Note "not a url" is absent on purpose — it resolves relative to the host
+    // page, which is the documented behaviour for a bare path in the data.
+    for (const coverImageUrl of ['javascript:alert(1)', 'file:///etc/passwd', '']) {
+      el.data = { timeline: { id: 't', title: 'No cover', coverImageUrl }, events: [] };
+      expect(el.shadowRoot!.querySelector('[part="cover"]')).toBeNull();
+    }
+    el.remove();
+  });
+
   it('renders entities, extra media links, and sourceRef in the popover', () => {
     const el = mount();
     el.data = {

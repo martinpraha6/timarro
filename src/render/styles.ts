@@ -7,7 +7,7 @@
  * --timarro-border / --timarro-font / --timarro-display-font /
  * --timarro-mono-font / --timarro-error / --timarro-card-bg /
  * --timarro-card-fg.
- * Parts: header | viewport | event | axis | card | brand.
+ * Parts: header | cover | viewport | event | axis | card | brand.
  */
 
 const CSS = /* css */ `
@@ -39,7 +39,10 @@ const CSS = /* css */ `
     position: relative;
   }
   .heading {
-    max-width: 48rem;
+    /* flow-root, so the floated cover is contained here instead of hanging
+       down over the viewport when the copy beside it is short. */
+    display: flow-root;
+    max-width: 100%;
     margin: 0 0 1.5rem;
   }
   .header {
@@ -50,6 +53,24 @@ const CSS = /* css */ `
     font-weight: 520;
     line-height: 1.08;
     letter-spacing: -0.025em;
+  }
+  /*
+   * Cover art floated right, with the title and description running up its
+   * left side and then continuing underneath once they clear it.
+   *
+   * Never cropped: covers on real timelines are overwhelmingly portrait (a
+   * painting of one person), and any object-fit: cover strip centres the crop
+   * straight through the subject's face. Width governs (30%); the height cap is
+   * only a backstop against a freakishly tall crop becoming a vertical strip.
+   */
+  .cover {
+    float: right;
+    width: auto;
+    max-width: 30%;
+    max-height: 28rem;
+    margin: 0.25rem 0 0.75rem 1.25rem;
+    border: 1px solid var(--_border);
+    border-radius: 10px;
   }
   .description {
     max-width: 42rem;

@@ -6,6 +6,7 @@ import {
 import { renderPopover, POPOVER_WIDTH } from './render/event-card';
 import { renderTimeline } from './render/render';
 import { applyStyles } from './render/styles';
+import { safeHttpUrl } from './render/url';
 import { renderVerticalTimeline } from './render/vertical';
 import type { TimarroTimelineData } from './schema/types';
 import { validateTimelineData } from './schema/validate';
@@ -210,6 +211,25 @@ export class TimarroTimeline extends BaseElement {
     header.textContent = state.data.timeline.title;
     const heading = document.createElement('header');
     heading.className = 'heading';
+    // Cover art floats to the right of the title and description — the same
+    // layout timarro-platform gives it, so an embed and the page it came from
+    // agree. It is appended FIRST because a float is taken out of flow where it
+    // appears: the title and description only run up its left side if they come
+    // after it. Dropped silently when the URL isn't http(s): a broken image is
+    // worse than no image, and the field is whatever an author typed.
+    const coverUrl = state.data.timeline.coverImageUrl;
+    const cover = coverUrl === undefined ? null : safeHttpUrl(coverUrl);
+    if (cover !== null) {
+      const img = document.createElement('img');
+      img.className = 'cover';
+      img.setAttribute('part', 'cover');
+      img.src = cover;
+      img.loading = 'lazy';
+      // Decorative by position: the title beside it already names the subject,
+      // and there is no caption field to say anything more.
+      img.alt = '';
+      heading.append(img);
+    }
     heading.append(header);
     if (state.data.timeline.description) {
       const description = document.createElement('p');
