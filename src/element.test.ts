@@ -218,6 +218,359 @@ describe('keyboard navigation', () => {
   });
 });
 
+describe('zoom', () => {
+  function ready(attrs: Record<string, string> = {}): TimarroTimeline {
+    const el = mount();
+    for (const [name, value] of Object.entries(attrs)) el.setAttribute(name, value);
+    el.data = apollo as TimarroTimelineData;
+    return el;
+  }
+
+  function pill(el: TimarroTimeline): HTMLButtonElement[] {
+    return [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('.zoom-btn')];
+  }
+
+  function level(el: TimarroTimeline): string {
+    return el.shadowRoot!.querySelector('.zoom-level')!.textContent;
+  }
+
+  function canvasWidth(el: TimarroTimeline): number {
+    return Number.parseFloat(el.shadowRoot!.querySelector<HTMLElement>('.canvas')!.style.width);
+  }
+
+  /** A crowd of point events inside one decade — packs deep unless spread out. */
+  function dense(count: number): TimarroTimelineData {
+    return {
+      timeline: { id: 't-dense', title: 'Dense' },
+      events: Array.from({ length: count }, (_, i) => ({
+        id: `e${i}`,
+        title: `Event number ${i} with a fairly long title`,
+        date: { start: `13${40 + (i % 10)}-0${(i % 9) + 1}-01`, precision: 'day' as const },
+      })),
+    };
+  }
+
+  function lanesUsed(el: TimarroTimeline): number {
+    const tops = [...el.shadowRoot!.querySelectorAll<HTMLElement>('.event--point')].map(
+      (e) => e.style.top,
+    );
+    return new Set(tops).size;
+  }
+
+  it('widens the canvas so point events never stack more than 5 deep', () => {
+    const el = mount();
+    el.data = dense(40);
+    const canvas = el.shadowRoot!.querySelector<HTMLElement>('.canvas')!;
+    expect(lanesUsed(el)).toBeLessThanOrEqual(5);
+    // It bought that by spreading horizontally past the viewport.
+    expect(Number.parseFloat(canvas.style.width)).toBeGreaterThan(480);
+    el.remove();
+  });
+
+  it('leaves an uncrowded timeline at its natural width', () => {
+    const el = ready();
+    // Apollo already fits the lane budget, so nothing was spread — and with no
+    // spread there is no overview below 1× to zoom out to.
+    expect(lanesUsed(el)).toBeLessThanOrEqual(5);
+    expect(pill(el)[0]?.disabled).toBe(true);
+    el.remove();
+  });
+
+  it('allows zooming out below 1× only when the layout spread itself', () => {
+    const el = mount();
+    el.data = dense(40);
+    const [out] = pill(el);
+    const width = (): number =>
+      Number.parseFloat(el.shadowRoot!.querySelector<HTMLElement>('.canvas')!.style.width);
+    const spread = width();
+
+    expect(out?.disabled).toBe(false);
+    out!.click();
+    // 1× is the readable default, not the floor: below it lies the overview.
+    expect(Number.parseFloat(level(el))).toBeLessThan(1);
+
+    for (let i = 0; i < 12; i += 1) out!.click();
+    expect(out?.disabled).toBe(true);
+    expect(Number.parseFloat(level(el))).toBeLessThan(1);
+    // The floor is where the domain fits the viewport — far narrower than the
+    // spread default, and it stops there.
+    expect(width()).toBeLessThan(spread / 2);
+    el.remove();
+  });
+
+  it('puts the pill in the legend row, below the plot and above the brand', () => {
+    const el = ready();
+    const container = el.shadowRoot!.querySelector('.container')!;
+    expect([...container.children].map((c) => c.className)).toEqual([
+      'heading',
+      'viewport',
+      'toolbar',
+      'brand',
+    ]);
+    // Legend and pill share the one row.
+    const row = container.querySelector('.toolbar')!;
+    expect([...row.children].map((c) => c.className)).toEqual(['legend', 'zoom']);
+    el.remove();
+  });
+
+  it('keeps the pill in its row when the legend is turned off', () => {
+    const el = ready({ legend: 'false' });
+    const row = el.shadowRoot!.querySelector('.toolbar')!;
+    expect(el.shadowRoot!.querySelector('.legend')).toBeNull();
+    expect([...row.children].map((c) => c.className)).toEqual(['zoom']);
+    el.remove();
+  });
+
+  it('renders the zoom pill for horizontal, starting fit and disabled', () => {
+    const el = ready();
+    const [out, reset, zin] = pill(el);
+    expect(level(el)).toBe('1.0×');
+    expect(out?.disabled).toBe(true);
+    expect(reset?.disabled).toBe(true);
+    expect(zin?.disabled).toBe(false);
+    expect(el.shadowRoot!.querySelector('[part="controls"]')).not.toBeNull();
+    el.remove();
+  });
+
+  it('widens the canvas on zoom in and restores it on reset', () => {
+    const el = ready();
+    const [out, reset, zin] = pill(el);
+    const fitted = canvasWidth(el);
+
+    zin!.click();
+    expect(level(el)).toBe('1.5×');
+    expect(canvasWidth(el)).toBeGreaterThan(fitted);
+    expect(out?.disabled).toBe(false);
+    // The pill survives a plot re-render — it lives outside the viewport.
+    expect(pill(el)[2]).toBe(zin);
+
+    zin!.click();
+    expect(level(el)).toBe('2.3×');
+
+    reset!.click();
+    expect(level(el)).toBe('1.0×');
+    expect(canvasWidth(el)).toBe(fitted);
+    el.remove();
+  });
+
+  it('lets the plot height follow the content it actually needs', () => {
+    const el = ready();
+    const viewport = el.shadowRoot!.querySelector<HTMLElement>('[part="viewport"]')!;
+    const canvas = (): HTMLElement => el.shadowRoot!.querySelector<HTMLElement>('.canvas')!;
+    const before = Number.parseFloat(canvas().style.height);
+
+    for (let i = 0; i < 4; i += 1) pill(el)[2]!.click();
+    // Spread out, fewer events collide, so fewer lanes are needed — and the box
+    // must shrink with them rather than leaving a void under the axis.
+    expect(Number.parseFloat(canvas().style.height)).toBeLessThan(before);
+    expect(viewport.style.minHeight).toBe('');
+    el.remove();
+  });
+
+  it('clamps at 1× on the way out and at 16× on the way in', () => {
+    const el = ready();
+    const [out, , zin] = pill(el);
+    out!.click();
+    expect(level(el)).toBe('1.0×');
+    for (let i = 0; i < 12; i += 1) zin!.click();
+    expect(level(el)).toBe('16.0×');
+    expect(zin?.disabled).toBe(true);
+    el.remove();
+  });
+
+  it('zooms from the keyboard with +/-/0 and keeps marker focus', () => {
+    const el = ready();
+    const marker = el.shadowRoot!.querySelector<HTMLButtonElement>('.marker')!;
+    marker.focus();
+    const press = (key: string): void => {
+      marker.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, composed: true }));
+    };
+
+    press('+');
+    expect(level(el)).toBe('1.5×');
+    // The old marker node is gone; focus lands on its replacement, same index.
+    const refocused = el.shadowRoot!.activeElement as HTMLButtonElement;
+    expect(refocused.classList.contains('marker')).toBe(true);
+    expect(refocused.tabIndex).toBe(0);
+
+    refocused.dispatchEvent(new KeyboardEvent('keydown', { key: '-', bubbles: true }));
+    expect(level(el)).toBe('1.0×');
+    (el.shadowRoot!.activeElement as HTMLElement).dispatchEvent(
+      new KeyboardEvent('keydown', { key: '+', bubbles: true }),
+    );
+    expect(level(el)).toBe('1.5×');
+    (el.shadowRoot!.activeElement as HTMLElement).dispatchEvent(
+      new KeyboardEvent('keydown', { key: '0', bubbles: true }),
+    );
+    expect(level(el)).toBe('1.0×');
+    el.remove();
+  });
+
+  it('leaves ctrl/meta-modified keys to the browser', () => {
+    const el = ready();
+    const marker = el.shadowRoot!.querySelector<HTMLButtonElement>('.marker')!;
+    marker.dispatchEvent(new KeyboardEvent('keydown', { key: '+', ctrlKey: true, bubbles: true }));
+    marker.dispatchEvent(new KeyboardEvent('keydown', { key: '+', metaKey: true, bubbles: true }));
+    expect(level(el)).toBe('1.0×');
+    el.remove();
+  });
+
+  /**
+   * happy-dom's WheelEvent ignores the MouseEventInit modifier keys, so the
+   * gesture's defining flag has to be pinned on after construction. The real
+   * browser path is covered in e2e/zoom.spec.ts.
+   */
+  function wheelOn(target: HTMLElement, deltaY: number, ctrlKey = false): WheelEvent {
+    const event = new WheelEvent('wheel', { deltaY, bubbles: true, cancelable: true });
+    Object.defineProperty(event, 'ctrlKey', { value: ctrlKey });
+    target.dispatchEvent(event);
+    return event;
+  }
+
+  it('zooms on ctrl+wheel but lets a plain wheel scroll the page', () => {
+    const el = ready();
+    const viewport = el.shadowRoot!.querySelector<HTMLElement>('[part="viewport"]')!;
+
+    const plain = wheelOn(viewport, -120);
+    expect(level(el)).toBe('1.0×');
+    expect(plain.defaultPrevented).toBe(false);
+
+    // One 120px notch lands within a rounding step of one button press.
+    const zoomed = wheelOn(viewport, -120, true);
+    expect(zoomed.defaultPrevented).toBe(true);
+    expect(level(el)).toBe('1.5×');
+
+    wheelOn(viewport, 120, true);
+    expect(level(el)).toBe('1.0×');
+    el.remove();
+  });
+
+  it('coalesces a wheel burst into a single redraw on the next frame', async () => {
+    const el = ready();
+    const viewport = el.shadowRoot!.querySelector<HTMLElement>('[part="viewport"]')!;
+    const before = canvasWidth(el);
+
+    wheelOn(viewport, -120, true);
+    wheelOn(viewport, -120, true);
+    wheelOn(viewport, -120, true);
+    // The readout tracks every event as it arrives…
+    expect(level(el)).toBe('3.5×');
+    // …while the plot still shows the frame it last drew, rather than paying
+    // for a full re-layout three times inside one frame.
+    expect(canvasWidth(el)).toBe(before);
+
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    expect(canvasWidth(el)).toBeGreaterThan(before);
+    // One draw, at the level the burst finished on.
+    expect(level(el)).toBe('3.5×');
+    el.remove();
+  });
+
+  it('draws immediately for button zoom, which cannot outrun a frame', () => {
+    const el = ready();
+    const before = canvasWidth(el);
+    pill(el)[2]!.click();
+    expect(canvasWidth(el)).toBeGreaterThan(before);
+    el.remove();
+  });
+
+  it('is opt-out via zoom="off", which also disables the gesture', () => {
+    const el = ready({ zoom: 'off' });
+    expect(el.shadowRoot!.querySelector('.zoom')).toBeNull();
+    const viewport = el.shadowRoot!.querySelector<HTMLElement>('[part="viewport"]')!;
+    expect(wheelOn(viewport, -120, true).defaultPrevented).toBe(false);
+    el.remove();
+  });
+
+  it('has no zoom pill in the vertical layout', () => {
+    const el = ready({ orientation: 'vertical' });
+    expect(el.shadowRoot!.querySelector('.zoom')).toBeNull();
+    el.remove();
+  });
+
+  it('resets to fit when new data arrives', () => {
+    const el = ready();
+    pill(el)[2]!.click();
+    expect(level(el)).toBe('1.5×');
+    el.data = {
+      timeline: { id: 't2', title: 'Another' },
+      events: [{ id: 'e', title: 'One', date: { start: '1969', precision: 'year' } }],
+    };
+    expect(level(el)).toBe('1.0×');
+    el.remove();
+  });
+
+  it('drops back to the default when zoom is turned off mid-session', () => {
+    const el = ready();
+    const fitted = canvasWidth(el);
+    pill(el)[2]!.click();
+    pill(el)[2]!.click();
+    expect(canvasWidth(el)).toBeGreaterThan(fitted);
+
+    // Without the pill and the gesture there is no way back from a zoomed plot,
+    // so turning zoom off has to restore the default rather than freeze it.
+    el.setAttribute('zoom', 'off');
+    expect(el.shadowRoot!.querySelector('.zoom')).toBeNull();
+    expect(canvasWidth(el)).toBeCloseTo(fitted, 5);
+    el.remove();
+  });
+
+  it('leaves an open event card alone instead of zooming out from under it', () => {
+    const el = ready();
+    const marker = el.shadowRoot!.querySelector<HTMLButtonElement>('.marker')!;
+    marker.click();
+    expect(el.shadowRoot!.querySelector('.popover')).not.toBeNull();
+
+    marker.dispatchEvent(new KeyboardEvent('keydown', { key: '+', bubbles: true }));
+    expect(level(el)).toBe('1.0×');
+    expect(el.shadowRoot!.querySelector('.popover')).not.toBeNull();
+
+    // Escape is the way out; zoom keys work again once the card is closed.
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(el.shadowRoot!.querySelector('.popover')).toBeNull();
+    el.shadowRoot!.querySelector<HTMLButtonElement>('.marker')!.dispatchEvent(
+      new KeyboardEvent('keydown', { key: '+', bubbles: true }),
+    );
+    expect(level(el)).toBe('1.5×');
+    el.remove();
+  });
+
+  it('announces the level through a live region, silent on mount', () => {
+    const el = ready();
+    const status = el.shadowRoot!.querySelector('.zoom-status')!;
+    // Seeded before insertion: mounting the widget must not announce anything.
+    expect(status.getAttribute('aria-live')).toBe('polite');
+    expect(status.textContent).toBe('Zoom 1.0×');
+
+    pill(el)[2]!.click();
+    expect(status.textContent).toBe('Zoom 1.5×');
+    // The readout's own accessible name comes from aria-label, not its text.
+    expect(el.shadowRoot!.querySelector('.zoom-level')!.getAttribute('aria-label')).toBe(
+      'Reset zoom (currently 1.5×)',
+    );
+    el.remove();
+  });
+
+  /**
+   * The zoom-1 width is measured once and reused across zoom steps, which is a
+   * pure optimisation — except that a cache outliving its timeline would not be.
+   */
+  it('re-measures the zoom-1 width when the timeline is replaced', () => {
+    const el = mount();
+    el.data = dense(40);
+    const spread = canvasWidth(el);
+    expect(spread).toBeGreaterThan(1000); // spread well past the 480 viewport
+    pill(el)[2]!.click();
+
+    el.data = apollo as TimarroTimelineData;
+    // Apollo was never crowded, so it gets its own much narrower base width —
+    // a width still cached from the dense timeline would leave it stretched.
+    expect(level(el)).toBe('1.0×');
+    expect(canvasWidth(el)).toBeLessThan(spread / 2);
+    el.remove();
+  });
+});
+
 describe('fuzzy-date visual treatment (M5)', () => {
   const showcase: TimarroTimelineData = {
     timeline: { id: 't-precision', title: 'Precision' },

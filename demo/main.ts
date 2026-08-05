@@ -11,6 +11,8 @@ async function load(selector: string, url: string): Promise<void> {
 
 void load('#apollo', './data/apollo.json');
 void load('#charles', './data/charles-iv.json');
+void load('#dense', './data/dense.json');
+void load('#apollo-fixed', './data/apollo.json');
 void load('#apollo-narrow', './data/apollo.json');
 void load('#charles-vertical', './data/charles-iv.json');
 void load('#showcase', './data/precision-showcase.json');

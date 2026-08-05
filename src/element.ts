@@ -1,10 +1,11 @@
+import type { TimeScale } from './layout/scale';
 import {
   normalizeTimelineData,
   type NormalizedTimeline,
   type ResolvedEvent,
 } from './model/normalize';
 import { renderPopover, POPOVER_WIDTH } from './render/event-card';
-import { renderTimeline } from './render/render';
+import { measureBaseWidth, renderTimeline, type RenderContext } from './render/render';
 import { applyStyles } from './render/styles';
 import { safeHttpUrl } from './render/url';
 import { renderVerticalTimeline } from './render/vertical';
@@ -18,8 +19,55 @@ type State =
 
 type Orientation = 'horizontal' | 'vertical';
 
+interface ZoomControls {
+  zoomOut: HTMLButtonElement;
+  level: HTMLButtonElement;
+  zoomIn: HTMLButtonElement;
+  /** Off-screen live region; see `#buildZoomControls`. */
+  status: HTMLElement;
+}
+
+/** Memoized {@link measureBaseWidth}, keyed on the inputs it actually depends on. */
+interface BaseWidthCache {
+  normalized: NormalizedTimeline;
+  viewportWidth: number;
+  value: number;
+}
+
 /** Container width (px) below which `orientation="auto"` switches to vertical. */
 const VERTICAL_BREAKPOINT = 800;
+
+/** Minimum canvas width the horizontal layout is laid out against. */
+const MIN_PLOT_WIDTH = 480;
+
+/**
+ * 1× is the layout's own default: wide enough that point events stay inside
+ * their lane budget, which on a dense timeline is already wider than the
+ * viewport. Zooming out below it (down to `#minZoom`, where the whole domain
+ * fits on screen) is what gets you the overview.
+ */
+const DEFAULT_ZOOM = 1;
+const MAX_ZOOM = 16;
+/** One button press / key press. ~1.7 presses per doubling. */
+const ZOOM_STEP = 1.5;
+/** Zoom per px of wheel travel: one 100px notch ≈ 1.4×. */
+const WHEEL_ZOOM_RATE = 0.0035;
+/** Coarse devices can report huge single deltas — cap one event's worth. */
+const MAX_WHEEL_DELTA_PX = 200;
+const WHEEL_LINE_PX = 16;
+const WHEEL_PAGE_PX = 400;
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
+
+/** Wheel deltas arrive in px, lines, or pages — normalize to px. */
+function wheelDeltaPx(event: WheelEvent): number {
+  // 1 = DOM_DELTA_LINE, 2 = DOM_DELTA_PAGE (spelled out: the static members
+  // aren't present on every DOM implementation this runs in).
+  const scale = event.deltaMode === 1 ? WHEEL_LINE_PX : event.deltaMode === 2 ? WHEEL_PAGE_PX : 1;
+  return clamp(event.deltaY * scale, -MAX_WHEEL_DELTA_PX, MAX_WHEEL_DELTA_PX);
+}
 
 /**
  * SSR-safe base: importing this module in Node (e.g. to run the validator
@@ -34,11 +82,18 @@ const BaseElement: typeof HTMLElement =
  *
  * Attributes: `src` (JSON URL) · `locale` (BCP-47, default browser) ·
  * `orientation` (auto | horizontal | vertical; auto switches on container
- * width < 800px) · `legend` (M5). Setting the `data` property wins over `src`.
+ * width < 800px) · `legend` (M5) · `zoom` (`off`/`false` disables the
+ * horizontal zoom controls and gestures). Setting the `data` property wins
+ * over `src`.
  *
  * Keyboard: arrow keys move focus chronologically between event markers
  * (roving tabindex), Home/End jump to the first/last event, Enter/Space
- * toggle the detail popover, Escape closes it and returns focus.
+ * toggle the detail popover, Escape closes it and returns focus, `+`/`-`
+ * zoom the horizontal plot and `0` fits it back.
+ *
+ * Zoom (horizontal only): the −/level/+ pill in the footer row beside the
+ * legend, `Ctrl`/`⌘` + wheel or a trackpad pinch (anchored at the cursor).
+ * A plain wheel is left to the host page.
  *
  * Events (bubbling, composed): `timarro:load` {timeline} · `timarro:error`
  * {message[, issues]} · `timarro:select` {event}.
@@ -49,6 +104,7 @@ export class TimarroTimeline extends BaseElement {
     'locale',
     'orientation',
     'legend',
+    'zoom',
   ];
 
   #root: ShadowRoot;
@@ -60,11 +116,25 @@ export class TimarroTimeline extends BaseElement {
   #renderedOrientation: Orientation | null = null;
   #openEventId: string | null = null;
   #openAnchor: HTMLElement | null = null;
+  /** Horizontal only: the scroll container, its scale, and the zoom pill. */
+  #viewport: HTMLElement | null = null;
+  #scale: TimeScale | null = null;
+  #zoomControls: ZoomControls | null = null;
+  #zoom = DEFAULT_ZOOM;
+  /** Zoom at which the whole domain fits on screen; ≤ 1 once auto-spread bites. */
+  #minZoom = DEFAULT_ZOOM;
+  #baseWidthCache: BaseWidthCache | null = null;
+  /** In-flight coalesced zoom redraw, and the anchor it should restore. */
+  #zoomFrame: number | null = null;
+  #pendingAnchor: { time: number; offset: number } | null = null;
   #onDocumentClick = (event: MouseEvent): void => {
     this.#handleDocumentClick(event);
   };
   #onDocumentKeydown = (event: KeyboardEvent): void => {
     if (event.key === 'Escape') this.#closePopover(true);
+  };
+  #onWheel = (event: WheelEvent): void => {
+    this.#handleWheel(event);
   };
 
   constructor() {
@@ -74,6 +144,7 @@ export class TimarroTimeline extends BaseElement {
     this.#container = document.createElement('div');
     this.#container.className = 'container';
     this.#container.addEventListener('keydown', (event) => {
+      if (this.#handleZoomKeydown(event)) return;
       this.#handleMarkerKeydown(event);
     });
     this.#root.append(this.#container);
@@ -113,6 +184,7 @@ export class TimarroTimeline extends BaseElement {
   disconnectedCallback(): void {
     this.#resizeObserver?.disconnect();
     this.#resizeObserver = null;
+    this.#cancelZoomDraw();
     this.#abortFetch();
     this.#closePopover();
   }
@@ -127,6 +199,11 @@ export class TimarroTimeline extends BaseElement {
   }
 
   #ingest(value: unknown): void {
+    // A new timeline starts at its own default — the old zoom described a
+    // domain that no longer exists, and the cached width measured it.
+    this.#zoom = DEFAULT_ZOOM;
+    this.#minZoom = DEFAULT_ZOOM;
+    this.#baseWidthCache = null;
     if (value === null || value === undefined) {
       this.#state = { kind: 'empty' };
       this.#render();
@@ -195,6 +272,13 @@ export class TimarroTimeline extends BaseElement {
     container.replaceChildren();
     const state = this.#state;
     this.#renderedOrientation = null;
+    // Everything below was just detached along with the container's children,
+    // including whatever a coalesced zoom draw was about to redraw into.
+    this.#viewport = null;
+    this.#scale = null;
+    this.#zoomControls = null;
+    this.#cancelZoomDraw();
+    this.#pendingAnchor = null;
 
     if (state.kind === 'empty') {
       container.append(this.#statusBox('timarro: no data'));
@@ -251,21 +335,42 @@ export class TimarroTimeline extends BaseElement {
     const viewport = document.createElement('div');
     viewport.className = orientation === 'vertical' ? 'viewport viewport--vertical' : 'viewport';
     viewport.setAttribute('part', 'viewport');
-    const ctx = {
-      locale: this.getAttribute('locale') ?? undefined,
-      onSelect: (ev: ResolvedEvent, anchor: HTMLElement) => {
-        this.#togglePopover(ev, anchor);
-      },
-    };
+    const ctx = this.#renderContext();
     if (orientation === 'vertical') {
+      // The rail layout is flow-based and never overflows, so there is nothing
+      // to zoom; drop back to the default so a flip back to horizontal is clean.
+      this.#zoom = DEFAULT_ZOOM;
+      this.#minZoom = DEFAULT_ZOOM;
       renderVerticalTimeline(viewport, state.normalized, ctx);
+    } else if (this.#zoomEnabled()) {
+      // Non-passive: the zoom gesture has to cancel the browser's own.
+      viewport.addEventListener('wheel', this.#onWheel, { passive: false });
+      this.#viewport = viewport;
+      this.#drawPlot(viewport, state.normalized, ctx);
     } else {
-      renderTimeline(viewport, state.normalized, Math.max(this.clientWidth || 0, 480), ctx);
+      // Zoom turned off mid-session: drop back to the default rather than
+      // freeze at whatever level the user had reached, since the pill and the
+      // gestures that would take them back are both about to disappear.
+      this.#zoom = DEFAULT_ZOOM;
+      this.#minZoom = DEFAULT_ZOOM;
+      this.#viewport = viewport;
+      this.#drawPlot(viewport, state.normalized, ctx);
     }
     container.append(viewport);
-    this.#applyRovingTabindex();
 
-    if (this.#legendEnabled()) container.append(this.#buildLegend());
+    // Footer strip under the plot, above the attribution: legend on the left,
+    // zoom pill pushed to the right. Either may be turned off on its own.
+    const showZoom = orientation === 'horizontal' && this.#zoomEnabled();
+    if (this.#legendEnabled() || showZoom) {
+      const toolbar = document.createElement('div');
+      toolbar.className = 'toolbar';
+      if (this.#legendEnabled()) toolbar.append(this.#buildLegend());
+      if (showZoom) toolbar.append(this.#buildZoomControls());
+      container.append(toolbar);
+    }
+
+    this.#applyRovingTabindex();
+    this.#syncZoomControls();
 
     const brand = document.createElement('div');
     brand.className = 'brand';
@@ -277,6 +382,244 @@ export class TimarroTimeline extends BaseElement {
     link.textContent = 'Powered by Timarro';
     brand.append(link);
     container.append(brand);
+  }
+
+  #renderContext(): RenderContext {
+    return {
+      locale: this.getAttribute('locale') ?? undefined,
+      onSelect: (ev: ResolvedEvent, anchor: HTMLElement) => {
+        this.#togglePopover(ev, anchor);
+      },
+    };
+  }
+
+  /**
+   * Visible width the horizontal layout packs against, before the auto-spread
+   * and the zoom multiplier widen the canvas past it.
+   */
+  #viewportWidth(): number {
+    return Math.max(this.clientWidth || 0, MIN_PLOT_WIDTH);
+  }
+
+  /**
+   * Zoom-1 canvas width, measured at most once per (timeline, viewport width).
+   * The measurement is a search over as many as a dozen trial layouts of every
+   * event, and nothing it depends on changes while zooming — without the cache a
+   * wheel gesture would pay for it again on every event it emits.
+   */
+  #baseWidth(normalized: NormalizedTimeline, viewportWidth: number): number {
+    const cached = this.#baseWidthCache;
+    if (cached?.normalized === normalized && cached.viewportWidth === viewportWidth)
+      return cached.value;
+    const value = measureBaseWidth(normalized, viewportWidth);
+    this.#baseWidthCache = { normalized, viewportWidth, value };
+    return value;
+  }
+
+  /**
+   * Re-draws just the plot at the current zoom, leaving the heading, zoom pill,
+   * legend and brand in place — a full `#render()` would rebuild the very
+   * controls the click came from.
+   */
+  #renderPlot(): void {
+    const viewport = this.#viewport;
+    const state = this.#state;
+    if (viewport === null || state.kind !== 'ready') return;
+    // Every marker is about to move, and the popover is positioned from its
+    // anchor's rect — close it rather than leave it pointing at nothing.
+    this.#closePopover();
+    const focused = this.#markers().indexOf(this.#root.activeElement as HTMLButtonElement);
+    this.#drawPlot(viewport, state.normalized, this.#renderContext());
+    this.#applyRovingTabindex(focused);
+    this.#syncZoomControls();
+  }
+
+  /**
+   * One draw of the horizontal plot, plus the zoom bookkeeping that depends on
+   * it: the layout picks its own zoom-1 width, which is what sets how far out
+   * the user is allowed to zoom.
+   */
+  #drawPlot(viewport: HTMLElement, normalized: NormalizedTimeline, ctx: RenderContext): void {
+    const viewportWidth = this.#viewportWidth();
+    const baseWidth = this.#baseWidth(normalized, viewportWidth);
+    // Below this the domain is fully on screen, so there is nothing further to
+    // reveal. It is 1 unless the layout had to spread itself out to stay legible.
+    this.#minZoom = Math.min(DEFAULT_ZOOM, viewportWidth / baseWidth);
+    // A resize can raise the floor out from under the current zoom. Settle that
+    // before drawing — correcting afterwards would throw away a whole canvas.
+    this.#zoom = Math.max(this.#zoom, this.#minZoom);
+    this.#scale = renderTimeline(viewport, normalized, viewportWidth, ctx, this.#zoom, baseWidth);
+  }
+
+  /** Zoom defaults on; `zoom="false"` / `zoom="off"` removes it entirely. */
+  #zoomEnabled(): boolean {
+    const value = this.getAttribute('zoom');
+    return value !== 'false' && value !== 'off';
+  }
+
+  /**
+   * Applies a new zoom level and keeps the instant under `anchorClientX` (or the
+   * viewport centre, for button and keyboard zoom) pinned to the same spot on
+   * screen — without that, zooming in appears to fling the view sideways.
+   *
+   * `defer` coalesces the redraw onto the next frame; see `#scheduleZoomDraw`.
+   */
+  #setZoom(value: number, anchorClientX?: number, defer = false): void {
+    const next = clamp(value, this.#minZoom, MAX_ZOOM);
+    if (next === this.#zoom) return;
+
+    // Captured against the geometry currently on screen. With a deferred draw
+    // that is still the last-drawn geometry, so every event in a burst anchors
+    // against the same picture the user is looking at and the last one wins.
+    const viewport = this.#viewport;
+    const scale = this.#scale;
+    if (viewport !== null && scale !== null) {
+      const inner = viewport.clientWidth;
+      const offset =
+        anchorClientX === undefined
+          ? inner / 2
+          : clamp(anchorClientX - viewport.getBoundingClientRect().left, 0, inner);
+      this.#pendingAnchor = { time: scale.toTime(viewport.scrollLeft + offset), offset };
+    } else {
+      this.#pendingAnchor = null;
+    }
+
+    this.#zoom = next;
+    // The readout tracks the gesture even on a frame where the plot doesn't.
+    this.#syncZoomControls();
+    if (defer) this.#scheduleZoomDraw();
+    else this.#drawZoom();
+  }
+
+  /**
+   * Wheel events outrun the frame budget on a big timeline — laying out a
+   * 500-event plot costs ~35ms against a 16.7ms frame — so a gesture coalesces
+   * into one draw per frame instead of one per event. Buttons and keys draw
+   * immediately: they cannot arrive fast enough to matter.
+   */
+  #scheduleZoomDraw(): void {
+    if (this.#zoomFrame !== null) return;
+    this.#zoomFrame = requestAnimationFrame(() => {
+      this.#zoomFrame = null;
+      this.#drawZoom();
+    });
+  }
+
+  #cancelZoomDraw(): void {
+    if (this.#zoomFrame === null) return;
+    cancelAnimationFrame(this.#zoomFrame);
+    this.#zoomFrame = null;
+  }
+
+  #drawZoom(): void {
+    const anchor = this.#pendingAnchor;
+    this.#pendingAnchor = null;
+    this.#renderPlot();
+    const viewport = this.#viewport;
+    if (viewport !== null && anchor !== null && this.#scale !== null) {
+      viewport.scrollLeft = this.#scale.toPx(anchor.time) - anchor.offset;
+    }
+  }
+
+  /** Compact −/level/+ pill; the level readout doubles as reset-to-default. */
+  #buildZoomControls(): HTMLElement {
+    const group = document.createElement('div');
+    group.className = 'zoom';
+    group.setAttribute('part', 'controls');
+    group.setAttribute('role', 'group');
+    group.setAttribute('aria-label', 'Zoom');
+    // Names the gestures that have no visible affordance of their own.
+    group.title = 'Zoom: these buttons, the + / − keys, or Ctrl/⌘ + scroll (trackpad pinch)';
+
+    const button = (className: string, label: string, onClick: () => void): HTMLButtonElement => {
+      const el = document.createElement('button');
+      el.type = 'button';
+      el.className = className;
+      el.setAttribute('aria-label', label);
+      el.addEventListener('click', onClick);
+      return el;
+    };
+
+    const zoomOut = button('zoom-btn', 'Zoom out', () => {
+      this.#setZoom(this.#zoom / ZOOM_STEP);
+    });
+    zoomOut.textContent = '−';
+    const level = button('zoom-btn zoom-level', 'Reset zoom', () => {
+      this.#setZoom(DEFAULT_ZOOM);
+    });
+    const zoomIn = button('zoom-btn', 'Zoom in', () => {
+      this.#setZoom(this.#zoom * ZOOM_STEP);
+    });
+    zoomIn.textContent = '+';
+
+    // The level readout carries an aria-label ("Reset zoom (currently 2.3×)"),
+    // so its accessible name — not its text — is what a screen reader reads, and
+    // a silent relabel is not an announcement. This off-screen live region is
+    // what actually reports the new level. Seeded before insertion so mounting
+    // the widget doesn't announce anything.
+    const status = document.createElement('span');
+    status.className = 'zoom-status';
+    status.setAttribute('aria-live', 'polite');
+    status.textContent = this.#zoomLabel();
+
+    group.append(zoomOut, level, zoomIn, status);
+    this.#zoomControls = { zoomOut, level, zoomIn, status };
+    return group;
+  }
+
+  #zoomLabel(): string {
+    return `${this.#zoom.toFixed(1)}×`;
+  }
+
+  #syncZoomControls(): void {
+    const controls = this.#zoomControls;
+    if (controls === null) return;
+    const label = this.#zoomLabel();
+    controls.level.textContent = label;
+    controls.level.setAttribute('aria-label', `Reset zoom (currently ${label})`);
+    controls.level.disabled = this.#zoom === DEFAULT_ZOOM;
+    controls.zoomOut.disabled = this.#zoom <= this.#minZoom;
+    controls.zoomIn.disabled = this.#zoom >= MAX_ZOOM;
+    // Guarded: re-writing identical text still mutates the live region, and some
+    // screen readers announce that as a fresh change.
+    const spoken = `Zoom ${label}`;
+    if (controls.status.textContent !== spoken) controls.status.textContent = spoken;
+  }
+
+  #handleWheel(event: WheelEvent): void {
+    // Only the zoom gesture is intercepted. A plain wheel keeps scrolling the
+    // host page: an embed that swallows the page's scroll is a scroll trap.
+    if (!event.ctrlKey && !event.metaKey) return;
+    if (this.#renderedOrientation !== 'horizontal' || !this.#zoomEnabled()) return;
+    event.preventDefault();
+    this.#setZoom(
+      this.#zoom * Math.exp(-wheelDeltaPx(event) * WHEEL_ZOOM_RATE),
+      event.clientX,
+      true,
+    );
+  }
+
+  /** `+` / `-` / `0` on the plot. Returns true when the key was consumed. */
+  #handleZoomKeydown(event: KeyboardEvent): boolean {
+    // With a modifier these belong to the browser (page zoom); Shift is fair
+    // game because `+` needs it on most layouts.
+    if (event.ctrlKey || event.metaKey || event.altKey) return false;
+    if (this.#renderedOrientation !== 'horizontal' || !this.#zoomEnabled()) return false;
+    // An open card is a reading state, and re-drawing the plot would tear it
+    // down (its position is derived from a marker that is about to move). Arrow
+    // keys already leave it open, so a bare keystroke should not destroy it —
+    // Escape closes it. The pointer gestures still zoom: those aim at the plot.
+    if (this.#openEventId !== null) return false;
+
+    let next: number;
+    if (event.key === '+' || event.key === '=') next = this.#zoom * ZOOM_STEP;
+    else if (event.key === '-' || event.key === '_') next = this.#zoom / ZOOM_STEP;
+    else if (event.key === '0') next = DEFAULT_ZOOM;
+    else return false;
+
+    event.preventDefault();
+    this.#setZoom(next);
+    return true;
   }
 
   /** Legend defaults on; `legend="false"` / `legend="off"` hides it. */
@@ -311,12 +654,20 @@ export class TimarroTimeline extends BaseElement {
     return legend;
   }
 
-  /** First marker is the single tab stop; arrow keys move focus from there. */
-  #applyRovingTabindex(): void {
+  /**
+   * First marker is the single tab stop; arrow keys move focus from there.
+   * `focusIndex` re-homes focus after a zoom re-render replaced the focused
+   * marker with a fresh node — otherwise keyboard zooming drops to the body.
+   */
+  #applyRovingTabindex(focusIndex = -1): void {
     const markers = this.#markers();
+    const active = focusIndex >= 0 && focusIndex < markers.length ? focusIndex : 0;
     markers.forEach((marker, index) => {
-      marker.tabIndex = index === 0 ? 0 : -1;
+      marker.tabIndex = index === active ? 0 : -1;
     });
+    // preventScroll: #setZoom restores the scroll position itself, from the
+    // zoom anchor rather than from whichever marker happened to hold focus.
+    if (focusIndex >= 0) markers[active]?.focus({ preventScroll: true });
   }
 
   #markers(): HTMLButtonElement[] {

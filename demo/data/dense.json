@@ -1,0 +1,328 @@
+{
+  "timeline": {
+    "id": "tl-dense",
+    "title": "Dense life timeline",
+    "description": "34 point events plus five overlapping reigns — exercises the automatic lane-budget spread.",
+    "visibility": "public",
+    "sourceTypes": ["manual"]
+  },
+  "events": [
+    {
+      "id": "ev-0",
+      "title": "Birth in Prague",
+      "date": {
+        "start": "1316",
+        "precision": "year"
+      }
+    },
+    {
+      "id": "ev-1",
+      "title": "Baptism at St Vitus",
+      "date": {
+        "start": "1317-06-08",
+        "precision": "day"
+      }
+    },
+    {
+      "id": "ev-2",
+      "title": "Sent to the French court",
+      "date": {
+        "start": "1319-11-15",
+        "precision": "day"
+      }
+    },
+    {
+      "id": "ev-3",
+      "title": "Moved to Paris",
+      "date": {
+        "start": "1321-04",
+        "precision": "month"
+      }
+    },
+    {
+      "id": "ev-4",
+      "title": "Confirmed in the royal household",
+      "date": {
+        "start": "1323-09-02",
+        "precision": "day"
+      }
+    },
+    {
+      "id": "ev-5",
+      "title": "Called to Luxembourg",
+      "date": {
+        "start": "1325",
+        "precision": "year"
+      }
+    },
+    {
+      "id": "ev-6",
+      "title": "Arrival in northern Italy",
+      "date": {
+        "start": "1326-07",
+        "precision": "month"
+      }
+    },
+    {
+      "id": "ev-7",
+      "title": "Formation of the Italian signory",
+      "date": {
+        "start": "1328-12-23",
+        "precision": "day"
+      }
+    },
+    {
+      "id": "ev-8",
+      "title": "Besiegers withdraw from Modena",
+      "date": {
+        "start": "1330-05-03",
+        "precision": "day"
+      }
+    },
+    {
+      "id": "ev-9",
+      "title": "Battle of San Felice",
+      "date": {
+        "start": "1332-10",
+        "precision": "month"
+      }
+    },
+    {
+      "id": "ev-10",
+      "title": "Returns north over the Alps",
+      "date": {
+        "start": "1334",
+        "precision": "year"
+      }
+    },
+    {
+      "id": "ev-11",
+      "title": "Travels to the Tyrol",
+      "date": {
+        "start": "1335-08-24",
+        "precision": "day"
+      }
+    },
+    {
+      "id": "ev-12",
+      "title": "Sent to Bohemia as margrave",
+      "date": {
+        "start": "1337-01",
+        "precision": "month"
+      }
+    },
+    {
+      "id": "ev-13",
+      "title": "Trip to Budapest",
+      "date": {
+        "start": "1339-06-11",
+        "precision": "day"
+      }
+    },
+    {
+      "id": "ev-14",
+      "title": "Marriage negotiations open",
+      "date": {
+        "start": "1341-11-18",
+        "precision": "day"
+      }
+    },
+    {
+      "id": "ev-15",
+      "title": "Blanka of Valois arrives",
+      "date": {
+        "start": "1343",
+        "precision": "year"
+      }
+    },
+    {
+      "id": "ev-16",
+      "title": "Old Town of Prague chartered",
+      "date": {
+        "start": "1344-09-05",
+        "precision": "day"
+      }
+    },
+    {
+      "id": "ev-17",
+      "title": "Wedding celebrations conclude",
+      "date": {
+        "start": "1346-02-12",
+        "precision": "day"
+      }
+    },
+    {
+      "id": "ev-18",
+      "title": "Diet assembles at Prague",
+      "date": {
+        "start": "1348-07",
+        "precision": "month"
+      }
+    },
+    {
+      "id": "ev-19",
+      "title": "Stay in Moravia",
+      "date": {
+        "start": "1350-12-26",
+        "precision": "day"
+      }
+    },
+    {
+      "id": "ev-20",
+      "title": "Crossing to Silesia",
+      "date": {
+        "start": "1352",
+        "precision": "year"
+      }
+    },
+    {
+      "id": "ev-21",
+      "title": "Homage of the Silesian dukes",
+      "date": {
+        "start": "1353-10",
+        "precision": "month"
+      }
+    },
+    {
+      "id": "ev-22",
+      "title": "Elected King of the Romans",
+      "date": {
+        "start": "1355-03-20",
+        "precision": "day"
+      }
+    },
+    {
+      "id": "ev-23",
+      "title": "Crowned at Bonn",
+      "date": {
+        "start": "1357-08-27",
+        "precision": "day"
+      }
+    },
+    {
+      "id": "ev-24",
+      "title": "Death of John of Bohemia at Crecy",
+      "date": {
+        "start": "1359-01",
+        "precision": "month"
+      }
+    },
+    {
+      "id": "ev-25",
+      "title": "Coronation as King of Bohemia",
+      "date": {
+        "start": "1361",
+        "precision": "year"
+      }
+    },
+    {
+      "id": "ev-26",
+      "title": "Charles University founded",
+      "date": {
+        "start": "1362-11-21",
+        "precision": "day"
+      }
+    },
+    {
+      "id": "ev-27",
+      "title": "New Town of Prague founded",
+      "date": {
+        "start": "1364-04",
+        "precision": "month"
+      }
+    },
+    {
+      "id": "ev-28",
+      "title": "Foundation stone of the stone bridge",
+      "date": {
+        "start": "1366-09-08",
+        "precision": "day"
+      }
+    },
+    {
+      "id": "ev-29",
+      "title": "Golden Bull promulgated",
+      "date": {
+        "start": "1368-02-15",
+        "precision": "day"
+      }
+    },
+    {
+      "id": "ev-30",
+      "title": "Imperial coronation in Rome",
+      "date": {
+        "start": "1370",
+        "precision": "year"
+      }
+    },
+    {
+      "id": "ev-31",
+      "title": "Karlstejn consecrated",
+      "date": {
+        "start": "1371-12-02",
+        "precision": "day"
+      }
+    },
+    {
+      "id": "ev-32",
+      "title": "Second imperial journey",
+      "date": {
+        "start": "1373-05-09",
+        "precision": "day"
+      }
+    },
+    {
+      "id": "ev-33",
+      "title": "Death at Prague Castle",
+      "date": {
+        "start": "1375-10",
+        "precision": "month"
+      }
+    },
+    {
+      "id": "ev-r1",
+      "title": "Margrave of Moravia",
+      "date": {
+        "start": "1333",
+        "end": "1349",
+        "precision": "year"
+      }
+    },
+    {
+      "id": "ev-r2",
+      "title": "Count of Luxembourg",
+      "date": {
+        "start": "1346",
+        "end": "1353",
+        "precision": "year"
+      }
+    },
+    {
+      "id": "ev-r3",
+      "title": "King of Bohemia",
+      "date": {
+        "start": "1346",
+        "end": "1378",
+        "precision": "year"
+      }
+    },
+    {
+      "id": "ev-r4",
+      "title": "King of the Romans",
+      "date": {
+        "start": "1346",
+        "end": "1378",
+        "precision": "year"
+      }
+    },
+    {
+      "id": "ev-r5",
+      "title": "Holy Roman Emperor",
+      "date": {
+        "start": "1355",
+        "end": "1378",
+        "precision": "year"
+      }
+    }
+  ]
+}

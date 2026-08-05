@@ -38,6 +38,36 @@ describe('createTimeScale', () => {
     expect(narrow.ticks().some((t) => t.level === 'minor')).toBe(false); // years at ~2.6px
   });
 
+  it('refines the major unit as the canvas is zoomed in', () => {
+    const domain: [number, number] = [utcTime(1961), utcTime(1973)]; // 12 y
+    expect(createTimeScale(domain, 1000).unit).toBe('year');
+    // 8× the pixels per day buys a unit (or two) more detail.
+    expect(createTimeScale(domain, 8000, 8).unit).toBe('month');
+    expect(createTimeScale([utcTime(1316), utcTime(1379)], 2000, 2).unit).toBe('year');
+  });
+
+  it('coarsens rather than emitting a truncated run of ticks', () => {
+    // Density alone would pick days across three years — ~1200 majors, past the
+    // per-level cap, which would leave the axis labeled only at its left end.
+    const scale = createTimeScale([utcTime(1970), utcTime(1973)], 8000, 16);
+    expect(scale.unit).toBe('month');
+    const majors = scale.ticks().filter((t) => t.level === 'major');
+    // Complete coverage: ticks reach both ends of the domain, not just the start.
+    expect(scale.toPx(majors[0]!.t)).toBeLessThan(200);
+    expect(scale.toPx(majors.at(-1)!.t)).toBeGreaterThan(7800);
+  });
+
+  it('inverts toPx with toTime', () => {
+    const scale = createTimeScale([utcTime(1961), utcTime(1973)], 1000);
+    const t = utcTime(1969, 7, 21);
+    expect(scale.toTime(scale.toPx(t))).toBeCloseTo(t, -3);
+    expect(scale.toTime(16)).toBeCloseTo(scale.domain[0], -3);
+    // Degenerate canvas (narrower than the padding): no meaningful inverse.
+    expect(createTimeScale([utcTime(1961), utcTime(1973)], 10).toTime(5)).toBe(
+      createTimeScale([utcTime(1961), utcTime(1973)], 10).domain[0],
+    );
+  });
+
   it('handles a degenerate single-instant domain', () => {
     const t = utcTime(1969, 7, 21, 2, 56);
     const scale = createTimeScale([t, t], 800);

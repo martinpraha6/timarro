@@ -7,7 +7,7 @@
  * --timarro-border / --timarro-font / --timarro-display-font /
  * --timarro-mono-font / --timarro-error / --timarro-card-bg /
  * --timarro-card-fg.
- * Parts: header | cover | viewport | event | axis | card | brand.
+ * Parts: header | cover | controls | viewport | event | axis | card | brand.
  */
 
 const CSS = /* css */ `
@@ -78,6 +78,81 @@ const CSS = /* css */ `
     color: var(--_muted);
     font-size: 0.925rem;
     line-height: 1.65;
+  }
+
+  /*
+   * Footer strip below the plot and above the attribution: legend on the left,
+   * zoom pill on the right. Deliberately NOT floated over the canvas the way map
+   * controls are — lane 0 runs along the top edge, so an overlay would sit on
+   * top of the labels of whatever is latest in the timeline.
+   */
+  .toolbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    margin-top: 0.75rem;
+  }
+  .zoom {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 2px;
+    /* Holds the right edge whether or not a legend shares the row. */
+    margin-left: auto;
+    border: 1px solid var(--_border);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--timarro-card-bg, #fff) 92%, transparent);
+  }
+  .zoom-btn {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 26px;
+    height: 24px;
+    padding: 0 6px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--_muted);
+    font: inherit;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background-color 120ms ease;
+  }
+  .zoom-btn:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--_accent) 12%, transparent);
+    color: var(--_fg);
+  }
+  .zoom-btn:focus-visible {
+    outline: 2px solid var(--_accent);
+    outline-offset: 2px;
+  }
+  .zoom-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+  .zoom-level {
+    /* Fixed width: the readout changes on every step and must not jog the
+       buttons either side of it. */
+    min-width: 46px;
+    font-family: var(--timarro-mono-font, ui-monospace, monospace);
+    font-size: 10.5px;
+    letter-spacing: 0.02em;
+  }
+  /* Announces the level to screen readers without taking up layout. */
+  .zoom-status {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 
   .viewport {
@@ -500,8 +575,9 @@ const CSS = /* css */ `
   .legend {
     display: flex;
     flex-wrap: wrap;
-    gap: 1rem;
-    margin-top: 0.75rem;
+    gap: 0.35rem 1rem;
+    /* Spacing above belongs to .toolbar, which owns the whole row. */
+    margin: 0;
     color: var(--_muted);
     font-size: 10.5px;
   }

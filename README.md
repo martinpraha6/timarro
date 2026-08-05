@@ -124,6 +124,7 @@ import { validateTimelineData } from 'timarro';
 | `locale`      | BCP-47 tag (`en`, `cs`, `de-AT`, …)  | browser locale | all dates format via `Intl` in UTC                        |
 | `orientation` | `auto` \| `horizontal` \| `vertical` | `auto`         | `auto` switches to vertical when the container is < 800px |
 | `legend`      | `false` / `off` to hide              | shown          | compact key for the precision marker shapes               |
+| `zoom`        | `false` / `off` to disable           | enabled        | horizontal only — see [Zoom](#zoom)                       |
 
 ### Properties
 
@@ -147,9 +148,33 @@ el.addEventListener('timarro:select', (e) => {
 });
 ```
 
+### Zoom
+
+Zooming widens the canvas rather than narrowing the date range, so nothing ever drops out of view — the plot just gets more pixels per day, lanes are re-packed so crowded labels spread apart, and the axis refines decade → year → month → day. Panning is the viewport's own horizontal scroll.
+
+**`1.0×` is the layout's own default, not "everything on screen".** Point events are held to **at most 5 stacked lanes**: if they would pack deeper, the layout widens itself until they don't, and the timeline scrolls horizontally from the start. A twenty-deep column of labels reads as a list, not a timeline. Ranges are exempt — they pack in their own region below and stack as deep as they need to, without eating into the point budget.
+
+So on a dense timeline the zoom floor sits _below_ `1.0×`, at whatever level puts the whole domain on screen (`0.7×`, `0.4×`, …). That is the overview; `1.0×` is the readable default the reset button returns to. On a timeline that was never crowded the two coincide and `1.0×` is the floor.
+
+| Input                                    | Effect                                                          |
+| ---------------------------------------- | --------------------------------------------------------------- |
+| `−` / `+` in the pill beside the legend  | one step (1.5×) out / in, around the centre of the view         |
+| the level readout (`2.3×`)               | resets to the `1.0×` default                                    |
+| **Ctrl** / **⌘** + wheel, trackpad pinch | zooms anchored at the cursor — the date under it stays put      |
+| **+** / **-** / **0** keys               | step in / step out / default, with focus anywhere in the widget |
+| **Shift** + wheel, horizontal swipe      | pans (native scroll)                                            |
+
+The ceiling is `16×`. Plot height always follows the content, so zooming in — which frees lanes as events stop colliding — shortens the plot instead of leaving a gap above the axis.
+
+The keys are ignored while an event card is open, since re-drawing the plot would close it — **Esc** first. Wheel zoom redraws at most once per frame, so the readout can lead the plot by a frame during a fast gesture.
+
+A **plain wheel is never intercepted** — it scrolls the host page, so an embed can't become a scroll trap. Touch pinch is likewise left to the browser's own page zoom; below 800px the component switches to the vertical rail, which has nothing to zoom.
+
+`zoom="off"` removes the pill and the gestures, and returns the plot to `1.0×` — with no controls left there would be no way back from a zoomed-in view. The lane-budget spread is layout, not zoom, so it still applies.
+
 ### Keyboard
 
-With focus on a marker: **← / →** (or **↑ / ↓** in vertical mode) move chronologically, **Home / End** jump to first / last, **Enter / Space** toggle the detail card, **Esc** closes it and returns focus to the marker.
+With focus on a marker: **← / →** (or **↑ / ↓** in vertical mode) move chronologically, **Home / End** jump to first / last, **Enter / Space** toggle the detail card, **Esc** closes it and returns focus to the marker. **+ / - / 0** zoom the horizontal plot when no card is open (see [Zoom](#zoom)).
 
 ### Theming
 
@@ -170,7 +195,7 @@ CSS custom properties on the host (defaults match the Timarro brand — vermilio
 | `--timarro-card-fg`      | event detail card text      | inherits `--timarro-fg` |
 
 Shadow parts for deeper styling:
-`::part(header | cover | viewport | event | axis | card | legend | brand)`.
+`::part(header | cover | controls | viewport | event | axis | card | legend | brand)`.
 
 ```css
 timarro-timeline {

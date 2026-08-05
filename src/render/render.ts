@@ -1,5 +1,5 @@
 import { assignLanes } from '../layout/lanes';
-import { createTimeScale } from '../layout/scale';
+import { createTimeScale, type TimeScale } from '../layout/scale';
 import type { NormalizedTimeline, ResolvedEvent } from '../model/normalize';
 import { renderAxis } from './axis';
 import {
@@ -25,30 +25,57 @@ export interface RenderContext {
 
 const MIN_RANGE_BAR_PX = 12;
 
+/**
+ * Point events stack no deeper than this at the default zoom. A stack much taller
+ * than this stops reading as a timeline and starts reading as a list — past it the
+ * canvas is widened instead, trading vertical crowding for horizontal scrolling.
+ * Ranges are exempt: they pack in their own region below, and a busy range stack
+ * is legible in a way a deep column of point labels is not.
+ */
+const MAX_POINT_LANES = 5;
+/** Ceiling on that auto-spread, as a multiple of the viewport width. */
+const MAX_SPREAD_FACTOR = 12;
+/** Geometric step while searching for a width inside the lane budget. */
+const SPREAD_STEP = 1.4;
+
 /** Year/month precision spans a visible uncertainty interval; day/datetime doesn't. */
 function isFuzzyPrecision(precision: string): boolean {
   return precision === 'year' || precision === 'month';
 }
 
 /**
- * Builds the horizontal timeline into `viewport` (cleared first): an absolutely
- * positioned canvas with lane-packed point events on top, ranges as full-height
- * translucent bands behind them (labeled bars packed into a region below), and a
- * calendar axis. The canvas may be wider than the viewport — horizontal overflow
- * scrolls natively (no zoom in v1).
+ * The canvas width at zoom 1: the smallest width at or above `viewportWidth` that
+ * packs point events into at most {@link MAX_POINT_LANES} lanes, giving up at
+ * {@link MAX_SPREAD_FACTOR}×. It exceeds the viewport when the spread kicked in,
+ * which is what makes zoom 1 mean "readable" rather than "everything visible".
+ *
+ * Label widths are fixed px while positions scale with the canvas, so widening
+ * always separates events that collided — the search only has to find how much.
+ * It starts at the viewport and steps up, so the common case (a timeline that was
+ * never crowded) settles on the first try.
+ *
+ * Depends only on the data and the viewport width, never on zoom, and costs up to
+ * {@link MAX_SPREAD_FACTOR}-worth of trial layouts of every event. Callers that
+ * re-draw at many zoom levels should measure once and hand the result to
+ * {@link renderTimeline} rather than let it re-measure per draw.
  */
-export function renderTimeline(
-  viewport: HTMLElement,
-  normalized: NormalizedTimeline,
-  viewportWidth: number,
-  ctx: RenderContext,
-): void {
-  viewport.replaceChildren();
-  if (normalized.domain === null) return;
+export function measureBaseWidth(normalized: NormalizedTimeline, viewportWidth: number): number {
+  const domain = normalized.domain;
+  if (domain === null) return viewportWidth;
+  const maxWidth = viewportWidth * MAX_SPREAD_FACTOR;
+  let width = viewportWidth;
+  for (;;) {
+    const scale = createTimeScale(domain, width, width / viewportWidth);
+    const points = positionEvents(normalized.events, scale).filter((p) => p.kind === 'point');
+    if (assignLanes(points.map((p) => p.extent)).laneCount <= MAX_POINT_LANES) return width;
+    if (width >= maxWidth) return maxWidth;
+    width = Math.min(width * SPREAD_STEP, maxWidth);
+  }
+}
 
-  const scale = createTimeScale(normalized.domain, viewportWidth);
-
-  const positioned = normalized.events.map((ev): PositionedEvent => {
+/** Places every event on the canvas. Pure — no lanes assigned yet (`top` is 0). */
+function positionEvents(events: NormalizedTimeline['events'], scale: TimeScale): PositionedEvent[] {
+  return events.map((ev): PositionedEvent => {
     const kind = ev.end ? 'range' : 'point';
     const color = safeCssColor(ev.src.color) ?? undefined;
 
@@ -99,6 +126,40 @@ export function renderTimeline(
     ];
     return { ev, kind, x, barWidth: 0, left, top: 0, band, extent, lane: 0, color };
   });
+}
+
+/**
+ * Builds the horizontal timeline into `viewport` (cleared first): an absolutely
+ * positioned canvas with lane-packed point events on top, ranges as full-height
+ * translucent bands behind them (labeled bars packed into a region below), and a
+ * calendar axis. The canvas may be wider than the viewport — horizontal overflow
+ * scrolls natively.
+ *
+ * Width is chosen in two stages. First {@link measureBaseWidth} widens the layout
+ * until point events fit the {@link MAX_POINT_LANES} budget, which is what zoom 1
+ * means; then `zoom` scales that. The domain never changes — zooming only buys
+ * pixels per day, so packing re-runs at the new size and crowded labels spread
+ * out. Pass `baseWidth` to reuse an earlier measurement; it is re-measured only
+ * when omitted.
+ *
+ * Returns the scale, for mapping time ↔ canvas px so the caller can pin the
+ * instant under the cursor while zooming.
+ */
+export function renderTimeline(
+  viewport: HTMLElement,
+  normalized: NormalizedTimeline,
+  viewportWidth: number,
+  ctx: RenderContext,
+  zoom = 1,
+  baseWidth = measureBaseWidth(normalized, viewportWidth),
+): TimeScale | null {
+  viewport.replaceChildren();
+  if (normalized.domain === null) return null;
+
+  const plotWidth = baseWidth * zoom;
+  // Tick density follows the total stretch, not just the user's share of it.
+  const scale = createTimeScale(normalized.domain, plotWidth, plotWidth / viewportWidth);
+  const positioned = positionEvents(normalized.events, scale);
 
   // Points and ranges pack independently: points into lanes at the top, ranges
   // into their own region below. Chronological order in `positioned` is kept for
@@ -169,4 +230,5 @@ export function renderTimeline(
 
   canvas.append(ranges, list, renderAxis(scale, ctx.locale));
   viewport.append(canvas);
+  return scale;
 }
