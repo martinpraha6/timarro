@@ -8,7 +8,9 @@ Framework-agnostic web component for historical timelines: **`<timarro-timeline>
 
 Drop in JSON. Get a keyboard-accessible, precision-aware timeline that works in any stack — plain HTML, Next.js, Vue, a CMS embed.
 
-![Timeline with labels stacked above markers: shortened point titles, precision-distinct shapes (dots, rings, diamonds), range bars, uncertainty bands, and a legend](./docs/screenshot.png)
+![A Leonardo da Vinci timeline: a cover portrait floated beside the title and description, then exact dates as dots, a month as a ring, approximate years as diamonds with a ~ prefix, multi-year periods as labeled bars with uncertainty bands behind them, a per-event colour accent, a calendar axis, a precision legend, and a zoom control](./docs/screenshot.png)
+
+<sub>Cover art in the screenshot: Leonardo’s presumed self-portrait (red chalk, c. 1512) — public domain, via [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Leonardo_da_Vinci_-_presumed_self-portrait_-_WGA12798.jpg).</sub>
 
 The open rendering layer of [timarro.com](https://timarro.com) — create, share, and embed visual timelines. Rendered timelines carry a small “Powered by Timarro” attribution.
 
@@ -20,9 +22,10 @@ The open rendering layer of [timarro.com](https://timarro.com) — create, share
 - **Fuzzy dates are first-class** — year, month, day, and datetime precision render as distinct markers (diamonds, rings, dots), with uncertainty bands, gradient-faded range endpoints, and optional `circa`.
 - **Labels that stay readable** — point events stack a short title and date above the marker; click the title to expand the full text. Ranges keep full titles on the bar.
 - **Ranges that stack** — multi-day (or longer) spans draw as labeled bars with translucent bands behind the events they cover; overlapping ranges darken where they stack.
+- **Zoom that adds detail instead of cropping** — zooming widens the canvas rather than narrowing the date range, so events never drop out of view; the axis refines decade → year → month → day on the way in.
 - **Zero runtime deps in the embed** — vanilla TypeScript [custom element](https://developer.mozilla.org/en-US/docs/Web/API/Web_components); ≤ 25 kB minified. An optional Zod schema ships on a separate subpath.
 - **Responsive by container** — horizontal lanes when wide; a vertical rail under 800px of _container_ width (not viewport). Or pin either mode.
-- **Accessible** — arrow / Home / End across events, Enter or Space opens details, Esc closes and returns focus; ARIA throughout; `prefers-reduced-motion` respected.
+- **Accessible** — arrow / Home / End across events, Enter or Space opens details, Esc closes and returns focus, `+` / `-` / `0` zoom; ARIA throughout; `prefers-reduced-motion` respected.
 
 ---
 
@@ -150,11 +153,11 @@ el.addEventListener('timarro:select', (e) => {
 
 ### Zoom
 
-Zooming widens the canvas rather than narrowing the date range, so nothing ever drops out of view — the plot just gets more pixels per day, lanes are re-packed so crowded labels spread apart, and the axis refines decade → year → month → day. Panning is the viewport's own horizontal scroll.
+Zooming widens the canvas rather than narrowing the date range, so nothing ever drops out of view: the plot gains pixels per day, lanes re-pack so crowded labels separate, and the axis refines decade → year → month → day. Panning is the viewport’s own horizontal scroll.
 
-**`1.0×` is the layout's own default, not "everything on screen".** Point events are held to **at most 5 stacked lanes**: if they would pack deeper, the layout widens itself until they don't, and the timeline scrolls horizontally from the start. A twenty-deep column of labels reads as a list, not a timeline. Ranges are exempt — they pack in their own region below and stack as deep as they need to, without eating into the point budget.
+**`1.0×` is the layout’s own default, not “everything on screen”.** Point events are held to **at most 5 stacked lanes** — if they would pack deeper, the layout widens itself until they don’t, and the timeline scrolls horizontally from the start. A twenty-deep column of labels reads as a list, not a timeline. Ranges are exempt: they pack in their own region below, where stacking stays legible.
 
-So on a dense timeline the zoom floor sits _below_ `1.0×`, at whatever level puts the whole domain on screen (`0.7×`, `0.4×`, …). That is the overview; `1.0×` is the readable default the reset button returns to. On a timeline that was never crowded the two coincide and `1.0×` is the floor.
+So on a dense timeline the floor sits _below_ `1.0×`, at whatever level puts the whole domain on screen (`0.7×`, `0.4×`, …). That is the overview; `1.0×` is the readable default the reset returns to. On a timeline that was never crowded the two coincide.
 
 | Input                                    | Effect                                                          |
 | ---------------------------------------- | --------------------------------------------------------------- |
@@ -164,13 +167,13 @@ So on a dense timeline the zoom floor sits _below_ `1.0×`, at whatever level pu
 | **+** / **-** / **0** keys               | step in / step out / default, with focus anywhere in the widget |
 | **Shift** + wheel, horizontal swipe      | pans (native scroll)                                            |
 
-The ceiling is `16×`. Plot height always follows the content, so zooming in — which frees lanes as events stop colliding — shortens the plot instead of leaving a gap above the axis.
+The ceiling is `16×`. Plot height follows the content, so zooming in — which frees lanes as events stop colliding — shortens the plot rather than leaving a gap above the axis.
 
-The keys are ignored while an event card is open, since re-drawing the plot would close it — **Esc** first. Wheel zoom redraws at most once per frame, so the readout can lead the plot by a frame during a fast gesture.
+A **plain wheel is never intercepted**: it scrolls the host page, so an embed can’t become a scroll trap. Touch pinch is likewise left to the browser’s own page zoom, and below 800px the vertical rail has nothing to zoom.
 
-A **plain wheel is never intercepted** — it scrolls the host page, so an embed can't become a scroll trap. Touch pinch is likewise left to the browser's own page zoom; below 800px the component switches to the vertical rail, which has nothing to zoom.
+Two details worth knowing: the keys are ignored while an event card is open, since redrawing the plot would close it (**Esc** first), and wheel zoom redraws at most once per frame, so during a fast gesture the readout can lead the plot by a frame.
 
-`zoom="off"` removes the pill and the gestures, and returns the plot to `1.0×` — with no controls left there would be no way back from a zoomed-in view. The lane-budget spread is layout, not zoom, so it still applies.
+`zoom="off"` removes the pill and the gestures and returns the plot to `1.0×` — with no controls left, there would be no way back from a zoomed-in view. The lane-budget spread is layout, not zoom, so it still applies.
 
 ### Keyboard
 
@@ -238,7 +241,7 @@ Shape: `{ timeline, events }`. Full types live in `timarro`; the canonical Zod s
 }
 ```
 
-`timeline.coverImageUrl` floats to the right of the heading, with `timeline.description` running up its left side and continuing below it. The cover keeps its own aspect ratio (never cropped) at up to 30% of the width, and is dropped unless the URL is http(s). On the canvas, each point event shows a shortened title with the formatted date beneath it (click the title to expand); range events keep the full title on the bar. Opening a marker shows a detail card with description, entities, http(s) media, and `sourceRef` when present.
+`timeline.coverImageUrl` floats to the right of the heading, with `timeline.description` running up its left side and continuing below it. The cover keeps its own aspect ratio (never cropped), bounded by 30% of the width _and_ 28rem of height — so a tall portrait is held back by the height cap and renders narrower than 30%. It is dropped unless the URL is http(s). On the canvas, each point event shows a shortened title with the formatted date beneath it (click the title to expand); range events keep the full title on the bar. Opening a marker shows a detail card with description, entities, http(s) media, and `sourceRef` when present.
 
 ### Fuzzy dates
 
