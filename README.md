@@ -121,13 +121,13 @@ import { validateTimelineData } from 'timarro';
 
 ### Attributes
 
-| Attribute     | Values                               | Default        | Notes                                                     |
-| ------------- | ------------------------------------ | -------------- | --------------------------------------------------------- |
-| `src`         | URL of a timeline JSON document      | —              | fetched with abort-on-change; the `data` property wins    |
-| `locale`      | BCP-47 tag (`en`, `cs`, `de-AT`, …)  | browser locale | all dates format via `Intl` in UTC                        |
-| `orientation` | `auto` \| `horizontal` \| `vertical` | `auto`         | `auto` switches to vertical when the container is < 800px |
-| `legend`      | `false` / `off` to hide              | shown          | compact key for the precision marker shapes               |
-| `zoom`        | `false` / `off` to disable           | enabled        | horizontal only — see [Zoom](#zoom)                       |
+| Attribute     | Values                               | Default        | Notes                                                                |
+| ------------- | ------------------------------------ | -------------- | -------------------------------------------------------------------- |
+| `src`         | URL of a timeline JSON document      | —              | abort-on-change; `data` wins — see [Network access](#network-access) |
+| `locale`      | BCP-47 tag (`en`, `cs`, `de-AT`, …)  | browser locale | all dates format via `Intl` in UTC                                   |
+| `orientation` | `auto` \| `horizontal` \| `vertical` | `auto`         | `auto` switches to vertical when the container is < 800px            |
+| `legend`      | `false` / `off` to hide              | shown          | compact key for the precision marker shapes                          |
+| `zoom`        | `false` / `off` to disable           | enabled        | horizontal only — see [Zoom](#zoom)                                  |
 
 ### Properties
 
@@ -278,6 +278,32 @@ import { timarroTimelineDataSchema, PRECISIONS, SOURCE_TYPES, VISIBILITIES } fro
 ```
 
 `validateTimelineData` collects **all** issues (no fail-fast). `explainDateProblem` is the shared date-semantics check used by both the embed validator and the Zod schema.
+
+---
+
+## Network access
+
+Socket.dev flags this package with a [Network access](https://socket.dev/alerts/networkAccess) alert. That is correct and expected: the embed contains exactly one network call, and it is the `src` attribute.
+
+```ts
+// src/element.ts — the whole of it
+const response = await fetch(src, { signal: controller.signal });
+```
+
+It runs **only** when you set `src`, and it requests **only** the URL you put there. The response is parsed as JSON and validated before anything renders. The fetch aborts when `src` changes, when the `data` property is set, or when the element leaves the document.
+
+Beyond that, the element causes browser requests for the image URLs in **your own timeline data** — `timeline.coverImageUrl` and the first entry of an event’s `mediaUrls` — by rendering them as `<img src>`. Both pass through an http(s)-only filter first, so `javascript:`, `data:`, and malformed URLs are dropped rather than rendered.
+
+That is the complete list. The package sends **no** telemetry, analytics, beacons, or error reports, and never contacts timarro.com or any other endpoint of its own choosing — the “Powered by Timarro” attribution is a plain text link, not a request. There is no `XMLHttpRequest`, `WebSocket`, `EventSource`, `sendBeacon`, `Worker`, or dynamic `import()` in the published bundle, and the stylesheet references no remote fonts or images.
+
+**If you want zero network activity from the component,** omit `src` and assign the [`data` property](#programmatic-data) instead. Fetching is then entirely yours to do — the element never reaches the `fetch` call:
+
+```ts
+const el = document.querySelector('timarro-timeline');
+el.data = await fetch('/data/apollo.json').then((r) => r.json()); // your fetch, your policy
+```
+
+To verify any of this yourself, `npm pack timarro` and grep the tarball.
 
 ---
 
