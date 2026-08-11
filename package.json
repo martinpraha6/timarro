@@ -1,6 +1,6 @@
 {
   "name": "timarro",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Framework-agnostic web component for rendering historical timelines — <timarro-timeline>.",
   "keywords": [
     "timeline",
